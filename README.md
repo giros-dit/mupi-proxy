@@ -34,12 +34,11 @@ In case two or more entries with the same priority are selected, the request is 
 
 For example, if the MURT is configured with the following values:
 
-client_ip         mcast_group       mcast_src_ip      upstream_if  priority
------------------ ----------------- ----------------- ------------ --------
-10.100.0.0/26     224.0.122.5       10.100.0.21            7          30
-                  224.0.122.5                              8          20
-0.0.0.0/0         224.0.0.0/4       0.0.0.0/0              9          0
------------------ ----------------- ----------------- ------------ --------
+|client_ip        |mcast_group      |mcast_src_ip     |upstream_if |priority |
+|:----------------|:----------------|:----------------|------------|---------|
+|10.100.0.0/26    |224.0.122.5      |10.100.0.21      |    7       |   30    |
+|                 |224.0.122.5      |                 |    8       |   20    |
+|0.0.0.0/0        |224.0.0.0/4      |0.0.0.0/0        |    9       |   0     |
 
 the following queries would be directed to the upstream interfaces specified below:
 
