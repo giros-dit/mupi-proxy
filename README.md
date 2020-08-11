@@ -105,7 +105,5 @@ ssh root@provider1
 mcfirst -4 -I eth1 224.100.10.10 1234 -c 10
 ```
 
-
-
 Example configurations
 ----------------------
