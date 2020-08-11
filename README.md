@@ -60,7 +60,7 @@ To start using the mupi-proxy test scenario:
 
 1. Download and install the latest version of the VNXSDNLAB virtual machine from:
 
-```https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova```
+```[https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova](https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova)```
 
   Alternatevily, the scenario can be started from a Linux computer with VNX installed (see
   http://vnx.dit.upm.es/ for installation details).
