@@ -54,29 +54,28 @@ A [Virtual Networks over LinuX (VNX)](http://vnx.dit.upm.es) virtual testbed sce
 - Three containers (provider1-3) which act as IP multicast flow providers.
 - Six containers (client1-6) which act as clients that request IP multicast flows to the different providers.
 
-
 ![Fig2](https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy-fig2.png)
 
 To start using the mupi-proxy test scenario:
 
-- Download and install the latest version of the VNXSDNLAB virtual machine from:
+1. Download and install the latest version of the VNXSDNLAB virtual machine from:
 
-https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova
+'''https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova'''
 
   Alternatevely, the scenario can be started from a Linux computer with VNX installed (see
   http://vnx.dit.upm.es/ for installation details).
 
-- Start the VNXSDNLAB virtual machine and clone this github repository:
+2. Start the VNXSDNLAB virtual machine and clone this github repository:
 
 git clone https://github.com/giros-dit/mupi-proxy.git
 
-- Download the test scenario containers image:
+3. Download the test scenario containers image:
 
 cd test/filesystems
 vnx_download_rootfs -r vnx_rootfs_lxc_ubuntu64-18.04-v025-vnxlab2.tgz
 cd ..
 
-- Start the test scenario with:
+4. Start the test scenario with:
 
 vnx -f mupi-proxy-test1.xml -v -t
 
