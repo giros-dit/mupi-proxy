@@ -148,7 +148,7 @@ ssh client5 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10
 ```
 
 ### Mode2-SSM
-In this mode, client request are routed to providers depending on the multicast source requested. The routing tables configured are:
+In this mode, client request are routed to providers depending on the source and multicast group requested (S,G). The routing tables configured are:
 
 ```
 [murt]
@@ -171,9 +171,9 @@ For this mode, start ryu manager using this command:
 And you can test how the mode works with commands like:
 
 ```
-ssh client1 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 12 -c 10     # Receives from 10.100.0.31
-ssh client2 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 12 -c 10     # Receives from 10.100.0.31
-ssh client3 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 12 -c 10     # Receives from 10.100.0.31
+ssh client1 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 1234 -c 10     # Receives from 10.100.0.31
+ssh client2 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 1234 -c 10     # Receives from 10.100.0.31
+ssh client3 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 1234 -c 10     # Receives from 10.100.0.31
 ```
 
 If the source is not specified in client request, it receives simultaneously from the three providers:
