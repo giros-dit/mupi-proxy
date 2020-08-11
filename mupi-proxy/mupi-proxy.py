@@ -128,9 +128,9 @@ class MupiMcastProxy (app_manager.RyuApp):
             						match=match, instructions=inst)
         datapath.send_msg(mod)
 
-    def do_join(self, in_port, msg, provider, ip_group):
+    def do_join(self, in_port, msg, provider, mcast_group):
 
-        self.logger.debug(f'do_join called: in_port={in_port}, upstream_if={provider}, mcast_grp={ip_group}')
+        self.logger.debug(f'do_join called: in_port={in_port}, upstream_if={provider}, mcast_grp={mcast_group}')
         datapath = msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -144,21 +144,21 @@ class MupiMcastProxy (app_manager.RyuApp):
         datapath.send_msg(req)
         actions = []
 
-        if not self._to_hosts[dpid].get(ip_group):
-            self._to_hosts[dpid].setdefault(ip_group, {'providers': {}})
-        if not self._to_hosts[dpid][ip_group]['providers'].get(provider):
-            self._to_hosts[dpid][ip_group]['providers'][provider] = {'ports': {}}
-        if not self._to_hosts[dpid][ip_group]['providers'][provider]['ports'].get(in_port):
-            self._to_hosts[dpid][ip_group]['providers'][provider]['ports'][in_port] = {'out': False}
-            for port in self._to_hosts[dpid][ip_group]['providers'][provider]['ports']:
+        if not self._to_hosts[dpid].get(mcast_group):
+            self._to_hosts[dpid].setdefault(mcast_group, {'providers': {}})
+        if not self._to_hosts[dpid][mcast_group]['providers'].get(provider):
+            self._to_hosts[dpid][mcast_group]['providers'][provider] = {'ports': {}}
+        if not self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'].get(in_port):
+            self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port] = {'out': False}
+            for port in self._to_hosts[dpid][mcast_group]['providers'][provider]['ports']:
                 actions.append(parser.OFPActionOutput(port))
-            match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=ip_group, in_port=provider)
+            match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=mcast_group, in_port=provider)
             self.add_flow(datapath, 1, match, actions, msg.buffer_id)
-        if not self._to_hosts[dpid][ip_group]['providers'][provider]['ports'][in_port]['out']:
-            self._to_hosts[dpid][ip_group]['providers'][provider]['ports'][in_port]['out'] = True
-            self.logger.info(f"Flow added: in_port={in_port}, upstream_if={provider}, mcast_grp={ip_group}")
+        if not self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]['out']:
+            self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]['out'] = True
+            self.logger.info(f"Flow added: in_port={in_port}, upstream_if={provider}, mcast_grp={mcast_group}")
 
-    def do_leave(self, in_port, msg, provider, ip_group):
+    def do_leave(self, in_port, msg, provider, mcast_group):
         datapath = msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -175,35 +175,35 @@ class MupiMcastProxy (app_manager.RyuApp):
         # It sends 2 Leave messages, the second must be ignored
         if len(self._to_hosts[dpid]) == 0:
             return
-        if not self._to_hosts[dpid].get(ip_group):
+        if not self._to_hosts[dpid].get(mcast_group):
             return
-        if not self._to_hosts[dpid][ip_group]['providers'].get(provider):
+        if not self._to_hosts[dpid][mcast_group]['providers'].get(provider):
             return
-        if not self._to_hosts[dpid][ip_group]['providers'][provider]['ports'].get(in_port):
+        if not self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'].get(in_port):
             return
 
-        if self._to_hosts[dpid][ip_group]['providers'][provider]['ports'][in_port]['out']:
-            self._to_hosts[dpid][ip_group]['providers'][provider]['ports'][in_port]['out'] = False
-        if self._to_hosts[dpid][ip_group]['providers'][provider]['ports'].get(in_port):
-            del self._to_hosts[dpid][ip_group]['providers'][provider]['ports'][in_port]
-            match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=ip_group, in_port=provider)
-            if len(self._to_hosts[dpid][ip_group]['providers'][provider]['ports']) == 0:
+        if self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]['out']:
+            self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]['out'] = False
+        if self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'].get(in_port):
+            del self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]
+            match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=mcast_group, in_port=provider)
+            if len(self._to_hosts[dpid][mcast_group]['providers'][provider]['ports']) == 0:
                 self.del_flow(datapath, 1, in_port, match, actions, msg.buffer_id)
             else:
-                for port in self._to_hosts[dpid][ip_group]['providers'][provider]['ports']:
+                for port in self._to_hosts[dpid][mcast_group]['providers'][provider]['ports']:
                     actions.append(parser.OFPActionOutput(port))
                 self.add_flow(datapath, 1, match, actions, msg.buffer_id)
-        if len(self._to_hosts[dpid][ip_group]['providers'][provider]['ports']) == 0:
-            del self._to_hosts[dpid][ip_group]['providers'][provider]['ports']
-        if len(self._to_hosts[dpid][ip_group]['providers'][provider]) == 0:
-            del self._to_hosts[dpid][ip_group]['providers'][provider]
-        if len(self._to_hosts[dpid][ip_group]['providers']) == 0:
-            del self._to_hosts[dpid][ip_group]['providers']
-        if len(self._to_hosts[dpid][ip_group]) == 0:
-            del self._to_hosts[dpid][ip_group]
+        if len(self._to_hosts[dpid][mcast_group]['providers'][provider]['ports']) == 0:
+            del self._to_hosts[dpid][mcast_group]['providers'][provider]['ports']
+        if len(self._to_hosts[dpid][mcast_group]['providers'][provider]) == 0:
+            del self._to_hosts[dpid][mcast_group]['providers'][provider]
+        if len(self._to_hosts[dpid][mcast_group]['providers']) == 0:
+            del self._to_hosts[dpid][mcast_group]['providers']
+        if len(self._to_hosts[dpid][mcast_group]) == 0:
+            del self._to_hosts[dpid][mcast_group]
         self.logger.info("Flow updated")
 
-    def get_provider(self, ip_client, ip_group, ip_source):
+    def get_provider(self, client_ip, mcast_group, mcast_src_ip):
         self.clients_possible = {}
         self.providers = []
         db = dataset.connect('sqlite:///proxy-mcast.db')
@@ -213,7 +213,7 @@ class MupiMcastProxy (app_manager.RyuApp):
         #the one with the highest priority
         result = db['clients'].all()
         for res in result:
-            if(res['client'] == ip_client or res['client'] == None) and (res['group'] == ip_group or res['group'] == None) and (res['source'] == ip_source or res['source'] == None):
+            if(res['client'] == client_ip or res['client'] == None) and (res['group'] == mcast_group or res['group'] == None) and (res['source'] == mcast_src_ip or res['source'] == None):
                 client = table_clients.find_one(id=res['id'])
                 provider = client['provider']
                 priority = client['priority']
@@ -263,24 +263,24 @@ class MupiMcastProxy (app_manager.RyuApp):
             if(igmp_in.msgtype==0x22):
                 self.logger.info("IGMPv3 Membership Report reveived")
                 #Takes the values from the IGMP message (client, group, source)
-                ip_client = ipv4.src
-                ip_group = record.address
-                ip_source = record.srcs
-                if ip_source==[]:   #It can be sent or not
-                    ip_source=None
+                client_ip = ipv4.src
+                mcast_group = record.address
+                mcast_src_ip = record.srcs
+                if mcast_src_ip==[]:   #It can be sent or not
+                    mcast_src_ip=None
                 else:
-                    ip_source = record.srcs[0]
-                #upstream_ifs = self.get_provider(ip_client, ip_group, ip_source) # Returns the provider
-                upstream_ifs = self.murt.get_upstream_if(ip_client, ip_group, ip_source) # Returns the upstream if
+                    mcast_src_ip = record.srcs[0]
+                #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
+                upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip) # Returns the upstream if
 
                 if upstream_ifs:
                     for provider in upstream_ifs:
                         if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
                             self.logger.info("IGMPv3 Join: " + log)
-                            self.do_join(in_port, msg, provider, ip_group)
+                            self.do_join(in_port, msg, provider, mcast_group)
                         elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
                             self.logger.info("IGMPv3 Leave: " + log)
-                            self.do_leave(in_port, msg, provider, ip_group)
+                            self.do_leave(in_port, msg, provider, mcast_group)
                 else: 
                     self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}. mcast_src_ip={mcast_src_ip})')
 

@@ -270,17 +270,10 @@ Author:      Sandra Garcia
       #apt-get -y install smcroute
     </exec>
     <exec seq="start-test1" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-    </exec>
-    <exec seq="start-test2" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-    </exec>
-    <exec seq="start-test3" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-       /root/bin/mcsender_test start 224.10.10.31 1234
+       /root/bin/mcsender_test start 224.10.10.0 1234
+       /root/bin/mcsender_test start 224.10.10.1 1234
+       /root/bin/mcsender_test start 224.10.10.2 1234
+       /root/bin/mcsender_test start 224.10.10.3 1234
     </exec>
     <exec seq="stop-test" type="verbatim">
        killall mcsender
@@ -308,17 +301,10 @@ Author:      Sandra Garcia
       #apt-get -y install smcroute
     </exec>
     <exec seq="start-test1" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-    </exec>
-    <exec seq="start-test2" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-    </exec>
-    <exec seq="start-test3" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-       /root/bin/mcsender_test start 224.10.10.31 1234
+       /root/bin/mcsender_test start 224.10.10.0 1234
+       /root/bin/mcsender_test start 224.10.10.1 1234
+       /root/bin/mcsender_test start 224.10.10.2 1234
+       /root/bin/mcsender_test start 224.10.10.3 1234
     </exec>
     <exec seq="stop-test" type="verbatim">
        killall mcsender
@@ -346,17 +332,10 @@ Author:      Sandra Garcia
       #apt-get -y install smcroute
     </exec>
     <exec seq="start-test1" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-    </exec>
-    <exec seq="start-test2" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-    </exec>
-    <exec seq="start-test3" type="verbatim">
-       /root/bin/mcsender_test start 224.10.10.11 1234
-       /root/bin/mcsender_test start 224.10.10.21 1234
-       /root/bin/mcsender_test start 224.10.10.31 1234
+       /root/bin/mcsender_test start 224.10.10.0 1234
+       /root/bin/mcsender_test start 224.10.10.1 1234
+       /root/bin/mcsender_test start 224.10.10.2 1234
+       /root/bin/mcsender_test start 224.10.10.3 1234
     </exec>
     <exec seq="stop-test" type="verbatim">
        killall mcsender
