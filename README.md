@@ -71,7 +71,8 @@ To start using the mupi-proxy test scenario:
 
 3. Download the test scenario containers image:
 
-```cd test/filesystems
+```
+cd test/filesystems
 vnx_download_rootfs -r vnx_rootfs_lxc_ubuntu64-18.04-v025-vnxlab2.tgz
 cd .. 
 ```
@@ -82,23 +83,24 @@ cd ..
 
 5. Start mupi-proxy in controller container with:
 
-```ssh controller
-ryu-manager /root/ryu/flowmanager/flowmanager.py /root/mupi-proxy/mupi-proxy.py --config-file /root/mupi-proxy/conf/<config-file>
+```
+ssh root@controller
+ryu-manager ryu/flowmanager/flowmanager.py mupi-proxy/mupi-proxy.py --config-file mupi-proxy/conf/<config-file>
 ```
 
 being <config-file> the name of the mupi-proxy configuration file (see examples under mupi-proxy/conf/ directory).
 
 6. Once the scenario is started, you can connect to:
-..* the providers to program them to start sending IP multicast flows. For example, the command:
+  * the providers to program them to start sending IP multicast flows. For example, the command:
 
 ```mcsender -t3 -ieth1 224.100.10.10:1234```
 
-...starts to send one ip multicast packet each three seconds to 224.100.10.10:1234 through interface eth1
-..* the clients to join to the multicast groups sent by the providers. For example, the command: 
+   starts to send one ip multicast packet each three seconds to 224.100.10.10:1234 through interface eth1
+  * the clients to join to the multicast groups sent by the providers. For example, the command: 
 
 ```mcfirst -4 -I eth1 224.100.10.10 1234 -c 10```
 
-...request to join to multicast group 224.100.10.10 and loops till it receives 10 packets sent to 224.100.10.10:1234 through interface eth1.
+   request to join to multicast group 224.100.10.10 and loops till it receives 10 packets sent to 224.100.10.10:1234 through interface eth1.
 
 
 Example configurations
