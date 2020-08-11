@@ -17,7 +17,7 @@ The main task to carry out when configuring mupi-proxy is the definition of the 
 
 ```(client_ip, mcast_group, mcast_src_ip, upstream_if, priority)```
 
-Being:
+being:
 - **client_ip**: an IP address or prefix used to define the range of clients IP addresses the entry applies to.
 - **mcast_group**: an IP multicast group or a prefix of multicast groups the entry applies to.
 - **mcast_src_ip**: an IP address or prefix used to define the range of mcast source IP addresses the entry applies to.
