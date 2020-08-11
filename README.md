@@ -71,10 +71,11 @@ To start using the mupi-proxy test scenario:
 
 3. Download the test scenario containers image:
 
-```cd test/filesystems
+```
+cd test/filesystems
 vnx_download_rootfs -r vnx_rootfs_lxc_ubuntu64-18.04-v025-vnxlab2.tgz
-cd ..```
-
+cd ..
+```
 4. Start the test scenario with:
 
 ```vnx -f mupi-proxy-test1.xml -v -t```
