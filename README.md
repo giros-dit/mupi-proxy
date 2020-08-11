@@ -145,9 +145,9 @@ For this mode, start ryu manager using this command:
 And you can test how the mode works with commands like:
 
 ```
-ssh client1 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10.100.0.31
-ssh client3 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10.100.0.32
-ssh client5 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10.100.0.33
+ssh client1 mcfirst -4 -I eth1 224.10.10.1 1234 -c 10        # Receives from 10.100.0.31
+ssh client3 mcfirst -4 -I eth1 224.10.10.1 1234 -c 10        # Receives from 10.100.0.32
+ssh client5 mcfirst -4 -I eth1 224.10.10.1 1234 -c 10        # Receives from 10.100.0.33
 ```
 
 ### Mode2-SSM
