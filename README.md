@@ -86,6 +86,10 @@ cd ..
 
 ```sudo vnx -f mupi-proxy-test1.xml -v --create```
 
+Note: you can destroy the scenario with '--destroy' option:
+
+```sudo vnx -f mupi-proxy-test1.xml -v --destroy```
+
 5. Start mupi-proxy in controller container with:
 
 ```
