@@ -62,7 +62,7 @@ To start using the mupi-proxy test scenario:
 
 ```https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova```
 
-  Alternatevely, the scenario can be started from a Linux computer with VNX installed (see
+  Alternatevily, the scenario can be started from a Linux computer with VNX installed (see
   http://vnx.dit.upm.es/ for installation details).
 
 2. Start the VNXSDNLAB virtual machine and clone this github repository:
@@ -105,5 +105,106 @@ ssh root@provider1
 mcfirst -4 -I eth1 224.100.10.10 1234 -c 10
 ```
 
-Example configurations
-----------------------
+Basic proxy modes example configurations
+----------------------------------------
+
+draft-asaeda-pim-multiif-igmpmldproxy-04 describes in section 6.2 four posible modes of selecting the appropiate upstream interface. Examples of these modes are provided in mupi-proxy distribution.
+
+For testing the examples, all providers (1-3) are configured to transmit all of them to these three multicast groups: 224.10.10.11, 224.10.10.21 and 224.10.10.31. To start the transmission from the providers you can use this command:
+
+```vnx -f mupi-proxy-test1.xml -v -x start-test1```
+
+And to stop it:
+
+```vnx -f mupi-proxy-test1.xml -v -x stop-test```
+
+### Mode1-client
+Each client is assigned to a specific provider. Clients 1/2 are assigned to provider1, 3/4 to provider2 and 5/6 to provider3. The routing tables configured are:
+
+```
+[murt]
+# Multicast upstream routing table config
+#
+# Format:    Client IP      Multicast     Multicast    Upstream  Priority
+#            Addr/Prefix    group         source IP    If Id
+#                           Addr/prefix   Addr/Prefix
+murt_entry = 10.100.0.11,   ,             ,            7,        10
+murt_entry = 10.100.0.12,   ,             ,            7,        10
+murt_entry = 10.100.0.13,   ,             ,            8,        10
+murt_entry = 10.100.0.14,   ,             ,            8,        10
+murt_entry = 10.100.0.15,   ,             ,            9,        10
+murt_entry = 10.100.0.16,   ,             ,            9,        10
+```
+For this mode, start ryu manager using this command:
+
+```start-mupi-proxy mupi-proxy/mode1-client.conf```
+
+And you can test how the mode works with commands like:
+
+```
+ssh client1 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10.100.0.31
+ssh client3 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10.100.0.32
+ssh client5 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10.100.0.33
+```
+
+### Mode2-SSM
+In this mode, client request are routed to providers depending on the multicast source requested. The routing tables configured are:
+
+```
+[murt]
+# Multicast upstream routing table config
+#
+# Format:    Client IP      Multicast     Multicast    Upstream  Priority
+#            Addr/Prefix    group         source IP    If Id
+#                           Addr/prefix   Addr/Prefix
+murt_entry = ,              224.10.10.11, 10.100.0.31, 7,        10
+murt_entry = ,              224.10.10.11, 10.100.0.32, 8,        10
+murt_entry = ,              224.10.10.11, 10.100.0.33, 9,        10
+murt_entry = ,              224.10.10.21, 10.100.0.31, 7,        10
+murt_entry = ,              224.10.10.21, 10.100.0.32, 8,        10
+murt_entry = ,              224.10.10.21, 10.100.0.33, 9,        10
+```
+For this mode, start ryu manager using this command:
+
+```start-mupi-proxy mupi-proxy/mode2-asm.conf```
+
+And you can test how the mode works with commands like:
+
+```
+ssh client1 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 12 -c 10     # Receives from 10.100.0.31
+ssh client2 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 12 -c 10     # Receives from 10.100.0.31
+ssh client3 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 12 -c 10     # Receives from 10.100.0.31
+```
+
+If the source is not specified in client request, it receives simultaneously from the three providers:
+
+ssh client1 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10
+
+
+### Mode3-ASM
+In this mode, client requests are routed to providers depending on the multicast group requested: group .11 is assigned to provider 1, .21 to provider2 and .31 to provider3. The routing tables configured are:
+
+```
+[murt]
+# Multicast upstream routing table config
+#
+# Format:    Client IP      Multicast     Multicast    Upstream  Priority
+#            Addr/Prefix    group         source IP    If Id
+#                           Addr/prefix   Addr/Prefix
+murt_entry = ,              224.10.10.11, ,            7,        10
+murt_entry = ,              224.10.10.21, ,            8,        10
+murt_entry = ,              224.10.10.31, ,            9,        10
+```
+For this mode, start ryu manager using this command:
+
+```start-mupi-proxy mupi-proxy/mode3-asm.conf```
+
+And you can test how the mode works with commands like: 
+```
+ssh client1 mcfirst -4 -I eth1 224.10.10.11 1234 -c 10        # Receives from 10.100.0.31
+ssh client1 mcfirst -4 -I eth1 224.10.10.21 1234 -c 10        # Receives from 10.100.0.32
+ssh client1 mcfirst -4 -I eth1 224.10.10.31 1234 -c 10        # Receives from 10.100.0.33
+```
+
+### Mode4-source:
+In this mode, client requests are routed to providers depending on the multicast group requested: group .11 is assigned to provider 1, .21 to provider2 and .31 to provider3. The routing tables configured are:
