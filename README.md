@@ -18,7 +18,7 @@ The main task to carry out when configuring mupi-proxy is the definition of the 
 ```(client_ip, mcast_group, mcast_src_ip, upstream_if, priority)```
 
 being:
-- **client_ip**: an IP address or prefix used to define the range of clients IP addresses the entry applies to.
+- **client_ip**: an IP address or prefix used to define the range of client IP addresses the entry applies to.
 - **mcast_group**: an IP multicast group or a prefix of multicast groups the entry applies to.
 - **mcast_src_ip**: an IP address or prefix used to define the range of mcast source IP addresses the entry applies to.
 - **upstream_if**: the number of the upstream interface to be used. 
@@ -40,7 +40,7 @@ For example, if the MURT is configured with the following values:
 
 the following queries would be directed to the upstream interfaces specified below:
 
-- Q1: (10.100.0.20, 224.0.122.5, 10.100.0.21) -> 7     # matching entries: 1,2
+- Q1: (10.100.0.20, 224.0.122.5, 10.100.0.21) -> 7     # matching entries: 1,2,3
 - Q2: (10.100.0.70, 224.0.122.5, 10.100.0.21) -> 8     # matching entries: 2,3
 - Q3: (10.100.0.70, 224.0.122.6, 10.100.0.21) -> 9     # matching entries: 3
 
