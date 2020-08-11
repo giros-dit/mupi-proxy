@@ -56,6 +56,8 @@ A [Virtual Networks over LinuX (VNX)](http://vnx.dit.upm.es) virtual testbed sce
 
 ![Fig2](https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy-fig2.png)
 
+Note: All containers use the standard VNX account credentials: vnx/xxxx and root/xxxx.
+
 To start using the mupi-proxy test scenario:
 
 1. Download and install the latest version of the VNXSDNLAB virtual machine from:
