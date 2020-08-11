@@ -115,11 +115,11 @@ Basic proxy modes example configurations
 
 For testing the examples, all providers (1-3) are configured to transmit all of them to these four multicast groups: 224.10.10.0, 224.10.10.1, 224.10.10.2 and 224.10.10.3. These four groups can be aggregated in prefix 224.10.10.0/30. To start the transmission from the providers you can use this command:
 
-```vnx -f mupi-proxy-test1.xml -v -x start-test1```
+```sudo vnx -f mupi-proxy-test1.xml -v -x start-test1```
 
 And to stop it:
 
-```vnx -f mupi-proxy-test1.xml -v -x stop-test```
+```sudo vnx -f mupi-proxy-test1.xml -v -x stop-test```
 
 ### Mode1-client
 Each client is assigned to a specific provider. Clients 1/2 are assigned to provider1, 3/4 to provider2 and 5/6 to provider3. The routing tables configured are:
