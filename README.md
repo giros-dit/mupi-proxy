@@ -48,7 +48,7 @@ the following queries would be directed to the upstream interfaces specified bel
 Testing mupi-proxy
 ------------------
 
-A Virtual Networks over LinuX (VNX) virtual testbed scenario is distributed to easily test mupi-proxy. The test scenario is made of:
+A [Virtual Networks over LinuX (VNX)](http://vnx.dit.upm.es) virtual testbed scenario is distributed to easily test mupi-proxy. The test scenario is made of:
 - A Linux container (LXC) named controller which runs the Ryu controller and the mupi-proxy application.
 - An Open vSwitch (OVS) which is in charge of forwarding the traffic and it is OpenFlow-controlled from the SDN controller.
 - Three containers (provider1-3) which act as IP multicast flow providers.
