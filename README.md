@@ -28,23 +28,23 @@ Being:
 
 The first three fields (client_ip, mcast_group and mcast_src_ip) can be empty. An empty value in these fields is equivalent to 0.0.0.0/0.
 
-When a request to join an IP multicast group is received from a client, the mupi-proxy extracts the client source IP address, the IP multicast group and, if specified, the multicast source IP address. With these three values it iterates over the MURT entries to find the ones that match the request values, selecting the one with the highest priority and relaying the IGMP/MLD request to the upstream interface specified in the selected entry.
+When a request to join an IP multicast group is received from a client, the mupi-proxy extracts the client source IP address, the IP multicast group and, if specified, the multicast source IP address. With these three values, it iterates over the MURT entries to find the ones that match the request values, selecting the one with the highest priority and relaying the IGMP/MLD request to the upstream interface specified in the selected entry.
 
 In case two or more entries with the same priority are selected, the request is sent to all the upstream interfaces specified in the MURT entries.
 
 For example, if the MURT is configured with the following values:
 
-|client_ip        |mcast_group      |mcast_src_ip     |upstream_if |priority |
-|:----------------|:----------------|:----------------|------------|---------|
-|10.100.0.0/26    |224.0.122.5      |10.100.0.21      |    7       |   30    |
-|                 |224.0.122.5      |                 |    8       |   20    |
-|0.0.0.0/0        |224.0.0.0/4      |0.0.0.0/0        |    9       |   0     |
+|   |client_ip        |mcast_group      |mcast_src_ip     |upstream_if |priority |
+|---|:----------------|:----------------|:----------------|------------|---------|
+| 1 |10.100.0.0/26    |224.0.122.5      |10.100.0.21      |    7       |   30    |
+| 2 |                 |224.0.122.5      |                 |    8       |   20    |
+| 3 |0.0.0.0/0        |224.0.0.0/4      |0.0.0.0/0        |    9       |   0     |
 
 the following queries would be directed to the upstream interfaces specified below:
 
-- Q1: (10.100.0.20, 224.0.122.5, 10.100.0.21) -> 7 
-- Q2: (10.100.0.70, 224.0.122.5, 10.100.0.21) -> 8 
-- Q3: (10.100.0.70, 224.0.122.6, 10.100.0.21) -> 9 
+- Q1: (10.100.0.20, 224.0.122.5, 10.100.0.21) -> 7    # matching entries: 1,2
+- Q2: (10.100.0.70, 224.0.122.5, 10.100.0.21) -> 8    # matching entries: 2,3
+- Q3: (10.100.0.70, 224.0.122.6, 10.100.0.21) -> 9    # matching entries: 3
 
 
 Testing mupi-proxy
