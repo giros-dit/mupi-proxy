@@ -140,7 +140,7 @@ murt_entry = 10.100.0.16,   ,             ,            9,        10
 ```
 For this mode, start ryu manager using this command:
 
-```start-mupi-proxy mupi-proxy/mode1-client.conf```
+```start-mupi-proxy mupi-proxy/conf/mode1-client.conf```
 
 And you can test how the mode works with commands like:
 
@@ -166,7 +166,7 @@ murt_entry = ,              224.10.10.0/30, 10.100.0.33, 9,        10
 ```
 For this mode, start ryu manager using this command:
 
-```start-mupi-proxy mupi-proxy/mode2-asm.conf```
+```start-mupi-proxy mupi-proxy/conf/mode2-asm.conf```
 
 And you can test how the mode works with commands like:
 
@@ -200,7 +200,7 @@ murt_entry = ,              ,            ,            7,        0
 ```
 For this mode, start ryu manager using this command:
 
-```start-mupi-proxy mupi-proxy/mode3-asm.conf```
+```start-mupi-proxy mupi-proxy/conf/mode3-asm.conf```
 
 And you can test how the mode works with commands like: 
 ```
@@ -226,7 +226,7 @@ murt_entry = ,              ,             10.100.0.33, 9,        10
 
 For this mode, start ryu manager using this command:
 
-```start-mupi-proxy mupi-proxy/mode4-source.conf```
+```start-mupi-proxy mupi-proxy/conf/mode4-source.conf```
 
 And you can test how the mode works with commands like: 
 ```
