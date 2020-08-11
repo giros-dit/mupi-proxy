@@ -207,7 +207,7 @@ ssh client1 mcfirst -4 -I eth1 224.10.10.3 1234 -c 10        # Receives from 10.
 ```
 
 ### Mode4-source:
-In this mode, client requests are routed to providers depending on the source IP of the multicast flow: group .11 is assigned to provider 1, .21 to provider2 and .31 to provider3. The routing tables configured are:
+In this mode, client requests are routed to providers depending on the source IP of the multicast flow (S,\*). The routing tables configured are:
 
 ```
 [murt]
