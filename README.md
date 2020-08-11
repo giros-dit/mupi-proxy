@@ -7,7 +7,7 @@ Mupi-proxy (Multiple UPstream Interfaces multicast Proxy) is a proof of concept 
 
 The generic working scenario of mupi-proxy is presented in the figure, where several IP multicast flow providers are connected to upstream interfaces and several clients that consume the multicast flows are connected to downstream interfaces.
 
-Figure
+![Fig1]
 (https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy-fig1.png)
 
 In this scenario, mupi-proxy is in charge of relaying the control and data multicast flows among clients and providers. Basically it:
