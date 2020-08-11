@@ -91,17 +91,20 @@ ryu-manager ryu/flowmanager/flowmanager.py mupi-proxy/mupi-proxy.py --config-fil
 being *\<config-file\>* the name of the mupi-proxy configuration file (see examples under mupi-proxy/conf/ directory).
 
 6. Once the scenario is started, you can connect to:
-  * the providers to program them to start sending IP multicast flows. For example, the command:
+  * the providers (through ssh or directly through the console) to program them to start sending IP multicast flows. For example, the following command starts to send one ip multicast packet each three seconds to 224.100.10.10:1234 through interface eth1:
 
-```mcsender -t3 -ieth1 224.100.10.10:1234```
+```
+ssh root@client1
+mcsender -t3 -ieth1 224.100.10.10:1234
+```
 
-   starts to send one ip multicast packet each three seconds to 224.100.10.10:1234 through interface eth1
-   
-  * the clients to join to the multicast groups sent by the providers. For example, the command: 
+  * the clients to join to the multicast groups sent by the providers. For example, the following command request to join to multicast group 224.100.10.10 and loops till it receives 10 packets sent to 224.100.10.10:1234 through interface eth1:
 
-```mcfirst -4 -I eth1 224.100.10.10 1234 -c 10```
+```
+ssh root@provider1
+mcfirst -4 -I eth1 224.100.10.10 1234 -c 10
+```
 
-   request to join to multicast group 224.100.10.10 and loops till it receives 10 packets sent to 224.100.10.10:1234 through interface eth1.
 
 
 Example configurations
