@@ -110,6 +110,11 @@ ssh root@client1
 mcfirst -4 -I eth1 224.100.10.10 1234 -c 10
 ```
 
+7. To inspect the status of the flow tables of the switch, you can use [FlowManager](https://github.com/martimy/flowmanager) application. Just start a web navigator and connect to:
+
+```http://controller:8080/home/index.html```
+
+
 Basic proxy modes example configurations
 ----------------------------------------
 
