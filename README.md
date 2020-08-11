@@ -17,7 +17,7 @@ Mupi-proxy works as a standard Ethernet switch for unicast traffic.
 
 The main task to carry out when configuring mupi-proxy is the definition of the MURT. Each entry of the MURT is a 5-tuple with the following format:
 
-(client_ip, mcast_group, mcast_src_ip, upstream_if, priority)
+```(client_ip, mcast_group, mcast_src_ip, upstream_if, priority)```
 
 Being:
 - **client_ip**: an IP address or prefix used to define the range of clients IP addresses the entry applies to.
