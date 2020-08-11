@@ -1,5 +1,3 @@
-# mupi-proxy
-
 Multiple Upstream Interfaces Multicast Proxy (mupi-proxy)
 =========================================================
 
