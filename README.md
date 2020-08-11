@@ -20,11 +20,11 @@ The main task to carry out when configuring mupi-proxy is the definition of the 
 (client_ip, mcast_group, mcast_src_ip, upstream_if, priority)
 
 Being:
-- client_ip: an IP address or prefix used to define the range of clients IP addresses the entry applies to.
-- mcast_group: an IP multicast group or a prefix of multicast groups the entry applies to.
-- mcast_src_ip: an IP address or prefix used to define the range of mcast source IP addresses the entry applies to.
-- upstream_if: the number of the upstream interface to be used. 
-- priority: the priority of the table entry. 
+- **client_ip**: an IP address or prefix used to define the range of clients IP addresses the entry applies to.
+- **mcast_group**: an IP multicast group or a prefix of multicast groups the entry applies to.
+- **mcast_src_ip**: an IP address or prefix used to define the range of mcast source IP addresses the entry applies to.
+- **upstream_if**: the number of the upstream interface to be used. 
+- **priority**: the priority of the table entry. 
 
 The first three fields (client_ip, mcast_group and mcast_src_ip) can be empty. An empty value in these fields is equivalent to 0.0.0.0/0.
 
