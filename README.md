@@ -9,6 +9,7 @@ The generic working scenario of mupi-proxy is presented in the figure, where sev
 
 Figure
 
+
 In this scenario, mupi-proxy is in charge of relaying the control and data multicast flows among clients and providers. Basically it:
 - Relays the IGMP/MLD control requests sent by the clients to the providers following the selection policies configured. For that purpose, mupi-proxy includes a Multicast Upstream Routing Table (MURT) that allows to specify how the upstream interface is selected in terms of the client's IP address, the multicast group and the IP address of the multicast flow source.  
 - Relays the multicast data traffic sent by the providers to the clients.
