@@ -157,8 +157,8 @@ In this mode, client request are routed to providers depending on the source and
 # Format:    Client IP      Multicast       Multicast    Upstream  Priority
 #            Addr/Prefix    group           source IP    If Id
 #                           Addr/prefix     Addr/Prefix
-murt_entry = ,              224.10.10.0/30, 10.100.0.31, 7,        10
-murt_entry = ,              224.10.10.0/30, 10.100.0.32, 8,        10
+murt_entry = ,              224.10.10.0/31, 10.100.0.31, 7,        10
+murt_entry = ,              224.10.10.2/31, 10.100.0.32, 8,        10
 murt_entry = ,              224.10.10.0/30, 10.100.0.33, 9,        10
 ```
 For this mode, start ryu manager using this command:
@@ -169,14 +169,14 @@ And you can test how the mode works with commands like:
 
 ```
 ssh client1 mcfirst -4 -I eth1 10.100.0.31 224.10.10.0 1234 -c 10     # Receives from 10.100.0.31
-ssh client2 mcfirst -4 -I eth1 10.100.0.32 224.10.10.2 1234 -c 10     # Receives from 10.100.0.32
-ssh client3 mcfirst -4 -I eth1 10.100.0.33 224.10.10.3 1234 -c 10     # Receives from 10.100.0.33
+ssh client2 mcfirst -4 -I eth1 10.100.0.33 224.10.10.0 1234 -c 10     # Receives from 10.100.0.33
+ssh client3 mcfirst -4 -I eth1 10.100.0.32 224.10.10.0 1234 -c 10     # No data received
 ```
 
-If the source is not specified in a client request, it receives simultaneously from the three providers:
+If the source is not specified in a client request, it receives simultaneously from all matching entries. For example:
 
 ```
-ssh client1 mcfirst -4 -I eth1 224.10.10.3 1234 -c 10    # Receives from 10.100.0.31, .32 and .33
+ssh client1 mcfirst -4 -I eth1 224.10.10.0 1234 -c 10    # Receives from 10.100.0.31 and .33
 ```
 
 
