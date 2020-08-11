@@ -65,9 +65,12 @@ To start using the mupi-proxy test scenario:
   Alternatively, the scenario can be started on any Linux computer with VNX installed (see
   http://vnx.dit.upm.es/ for installation details).
 
-2. Start the VNXSDNLAB virtual machine, open a terminal and clone this github repository:
+2. Start the VNXSDNLAB virtual machine, open a terminal and update VNX to the latest version and clone mupy-proxy github repository:
 
-```git clone https://github.com/giros-dit/mupi-proxy.git```
+```
+sudo vnx_update
+git clone https://github.com/giros-dit/mupi-proxy.git
+```
 
 3. Download the test scenario containers image:
 
@@ -79,7 +82,7 @@ cd ..
 
 4. Start the test scenario with:
 
-```vnx -f mupi-proxy-test1.xml -v --create```
+```sudo vnx -f mupi-proxy-test1.xml -v --create```
 
 5. Start mupi-proxy in controller container with:
 
@@ -94,21 +97,21 @@ being *\<config-file\>* the name of the mupi-proxy configuration file (see examp
   * the providers (through ssh or directly through the console) to program them to start sending IP multicast flows. For example, the following command starts to send one ip multicast packet each three seconds to 224.100.10.10:1234 through interface eth1:
 
 ```
-ssh root@client1
+ssh root@provider1
 mcsender -t3 -ieth1 224.100.10.10:1234
 ```
 
   * the clients to join to the multicast groups sent by the providers. For example, the following command request to join to multicast group 224.100.10.10 and loops till it receives 10 packets sent to 224.100.10.10:1234 through interface eth1:
 
 ```
-ssh root@provider1
+ssh root@client1
 mcfirst -4 -I eth1 224.100.10.10 1234 -c 10
 ```
 
 Basic proxy modes example configurations
 ----------------------------------------
 
-draft-asaeda-pim-multiif-igmpmldproxy-04 describes in section 6.2 four posible modes of selecting the appropiate upstream interface. Examples of these modes are provided in mupi-proxy distribution.
+[draft-asaeda-pim-multiif-igmpmldproxy-04](https://datatracker.ietf.org/doc/draft-asaeda-pim-multiif-igmpmldproxy/) describes in section 6.2 four posible modes of selecting the appropiate upstream interface. Examples of these modes are provided in mupi-proxy distribution.
 
 For testing the examples, all providers (1-3) are configured to transmit all of them to these four multicast groups: 224.10.10.0, 224.10.10.1, 224.10.10.2 and 224.10.10.3. These four groups can be aggregated in prefix 224.10.10.0/30. To start the transmission from the providers you can use this command:
 
