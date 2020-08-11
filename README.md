@@ -110,7 +110,7 @@ Basic proxy modes example configurations
 
 draft-asaeda-pim-multiif-igmpmldproxy-04 describes in section 6.2 four posible modes of selecting the appropiate upstream interface. Examples of these modes are provided in mupi-proxy distribution.
 
-For testing the examples, all providers (1-3) are configured to transmit all of them to these three multicast groups: 224.10.10.11, 224.10.10.21 and 224.10.10.31. To start the transmission from the providers you can use this command:
+For testing the examples, all providers (1-3) are configured to transmit all of them to these four multicast groups: 224.10.10.0, 224.10.10.1, 224.10.10.2 and 224.10.10.3. These four groups can be aggregated in prefix 224.10.10.0/30. To start the transmission from the providers you can use this command:
 
 ```vnx -f mupi-proxy-test1.xml -v -x start-test1```
 
@@ -172,7 +172,7 @@ And you can test how the mode works with commands like:
 
 ```
 ssh client1 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 1234 -c 10     # Receives from 10.100.0.31
-ssh client2 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 1234 -c 10     # Receives from 10.100.0.31
+ssh client2 mcfirst -4 -I eth1 10.100.0.32 224.10.10.11 1234 -c 10     # Receives from 10.100.0.32
 ssh client3 mcfirst -4 -I eth1 10.100.0.31 224.10.10.11 1234 -c 10     # Receives from 10.100.0.31
 ```
 
