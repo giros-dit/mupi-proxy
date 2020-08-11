@@ -1,7 +1,7 @@
 # mupi-proxy
 
 Multiple Upstream Interfaces Multicast Proxy (mupi-proxy)
----------------------------------------------------------
+=========================================================
 
 Mupi-proxy (Multiple UPstream Interfaces multicast Proxy) is a proof of concept implementation of the extensions defined in IETF [draft-asaeda-pim-multiif-igmpmldproxy-04](https://datatracker.ietf.org/doc/draft-asaeda-pim-multiif-igmpmldproxy/) to support multiple upstream interfaces in IGMP/MLD proxies. It has been implemented for Linux using an SDN application running over Ryu controller that controls and Open vSwitch in charge of relaying the multicast data flows and IGMP/MLD traffic.
 
@@ -42,9 +42,9 @@ For example, if the MURT is configured with the following values:
 
 the following queries would be directed to the upstream interfaces specified below:
 
-- Q1: (10.100.0.20, 224.0.122.5, 10.100.0.21) -> 7    # matching entries: 1,2
-- Q2: (10.100.0.70, 224.0.122.5, 10.100.0.21) -> 8    # matching entries: 2,3
-- Q3: (10.100.0.70, 224.0.122.6, 10.100.0.21) -> 9    # matching entries: 3
+- Q1: (10.100.0.20, 224.0.122.5, 10.100.0.21) -> 7     # matching entries: 1,2
+- Q2: (10.100.0.70, 224.0.122.5, 10.100.0.21) -> 8     # matching entries: 2,3
+- Q3: (10.100.0.70, 224.0.122.6, 10.100.0.21) -> 9     # matching entries: 3
 
 
 Testing mupi-proxy
