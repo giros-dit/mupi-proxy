@@ -1,0 +1,19 @@
+#!/bin/bash
+
+cd `dirname $0`
+CDIR=$(pwd)
+
+if [ "$1" == 'start' ]; then 
+    echo "-- Starting test:   mcsender -t3 -ieth1 $2:$3"
+    #nohup mcsender -t3 -ieth1 224.100.10.10:1234 &
+    nohup mcsender -t3 -ieth1 $2:$3 &
+    sleep 2
+elif [ "$1" == 'stop' ]; then 
+    killall mcsender
+else
+    echo ""
+    echo "Usage:"
+    echo "    $0 start <mcast_group> <port>"
+    echo "    $0 stop"
+    exit 1
+fi

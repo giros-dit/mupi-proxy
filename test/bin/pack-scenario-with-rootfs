@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Move to the directory where this script is
+cdir=$( dirname $0 )
+cd $cdir
+
+SCENARIO=$( cat pack-scenario | grep '^SCENARIO' | sed -e 's/^SCENARIO=//') 
+VERS=$( cat ../bin/pack-scenario | grep '^VERS' | sed -e 's/^VERS=//' -e "s/['\"]//g" ) 
+echo $SCENARIO
+echo $VERS
+
+if [ -e ../${SCENARIO::-4}-v${VERS}.tgz ]; then
+    mv -v ../${SCENARIO::-4}-v${VERS}.tgz ../${SCENARIO::-4}-v${VERS}.tgz.orig 
+fi
+
+if [ -e ../${SCENARIO::-4}-v${VERS}-with-rootfs.tgz ]; then
+    mv -v ../${SCENARIO::-4}-v${VERS}-with-rootfs.tgz ../${SCENARIO::-4}-v${VERS}-with-rootfs.tgz.old
+fi
+
+./pack-scenario --include-rootfs
+
+mv ../${SCENARIO::-4}-v${VERS}.tgz ../${SCENARIO::-4}-v${VERS}-with-rootfs.tgz
+
+if [ -e ../${SCENARIO::-4}-v${VERS}.tgz.orig ]; then
+    mv ../${SCENARIO::-4}-v${VERS}.tgz.orig ../${SCENARIO::-4}-v${VERS}.tgz 
+fi

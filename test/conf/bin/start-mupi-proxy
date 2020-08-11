@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ryu-manager /root/ryu/flowmanager/flowmanager.py /root/mupi-proxy/mupi-proxy.py --config-file $1

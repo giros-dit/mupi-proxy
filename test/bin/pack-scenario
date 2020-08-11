@@ -1,0 +1,16 @@
+#!/bin/bash
+
+SCENARIO=mupi-proxy-test1.xml
+VERS='01b'
+
+# Move to the upper directory where this script is
+cdir=$( dirname $0 )
+cd $cdir/..
+
+vnx --pack $SCENARIO \
+    --pack-version $VERS \
+    --pack-add-files \
+        README.md \
+        bin client provider mupi-proxy  \
+    $1 $2 $3
+

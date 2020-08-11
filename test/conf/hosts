@@ -1,0 +1,12 @@
+10.100.0.1      router
+
+10.100.0.11     client1
+10.100.0.12     client2
+10.100.0.13     client3
+10.100.0.14     client4
+10.100.0.15     client5
+10.100.0.16     client6
+
+10.100.0.31     provider1
+10.100.0.32     provider2
+10.100.0.33     provider3

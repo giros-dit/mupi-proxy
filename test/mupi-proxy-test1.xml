@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+~~~~~~~~~~~~~~~~~~~~~~
+|Proxy-mcast Scenario|
+~~~~~~~~~~~~~~~~~~~~~~
+
+Name:        Proxy-mcast
+
+Description: Basic scenario to test the multicast proxy with multiprovider capabilities.
+
+Author:      Sandra Garcia
+             David Fernández
+-->
+
+<vnx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="/usr/share/xml/vnx/vnx-2.00.xsd">
+  <global>
+    <version>2.0</version>
+    <scenario_name>mupi-proxy-test1</scenario_name>
+    <!--ssh_key>~/.ssh/id_rsa.pub</ssh_key-->
+    <ssh_key>./keys/id_rsa.pub</ssh_key>
+    <automac/>
+    <!--vm_mgmt type="none" /!-->
+    <vm_mgmt type="private" network="10.250.0.0" mask="24" offset="0">
+       <host_mapping />
+    </vm_mgmt>
+    <vm_defaults>
+        <console id="0" display="no"/>
+        <console id="1" display="yes"/>
+    </vm_defaults>
+  </global>
+
+  <!-- NET DEFINITION -->
+  <!-- virbr0 (192.168.122.0/24) -->
+  <net name="virbr0" mode="virtual_bridge" managed="no"/>
+  <net name="sw1" mode="openvswitch" controller="tcp:10.200.0.2:6633" of_version="OpenFlow13" fail_mode="secure" hwaddr="00:00:00:00:00:01"/>
+  <net name="sw-mgmt" mode="virtual_bridge"/>
+
+  <!-- RYU Controller -->
+  <vm name="controller" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <!--filesystem type="cow">/home/upm/ONOS-SDN-IP-v04/filesystems/vnx_rootfs_lxc_ubuntu64-18.04-v025-onos-1.14.0</filesystem-->
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/mupi-proxy/">../mupi-proxy/</shareddir>
+    <!--shareddir root="/root/ryu/">ryu</shareddir-->
+    <if id="1" net="sw-mgmt">
+      <ipv4>10.200.0.2/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+
+      #export DEBIAN_FRONTEND=noninteractive
+      #dhclient eth9
+      #sleep 5
+      #apt-get update
+      #apt-get -y install python3-pip
+      ##pip3 install dataset datafreeze normality
+      #yes | pip uninstall ryu
+      #apt-get -y install python3-ryu
+
+    </exec>
+  </vm>
+
+  <!-- Clients -->
+  <vm name="client1" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.11/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client2" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.12/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client3" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.13/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client4" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.14/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client5" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.15/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client6" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.16/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <!--vm name="client7" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.17/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client8" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.18/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client9" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.19/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm>
+
+  <vm name="client10" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/client/">client</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.20/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+    </exec>
+  </vm!-->
+
+  <!-- Providers -->
+  <vm name="provider1" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/provider/">provider</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.31/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+      #export DEBIAN_FRONTEND=noninteractive
+      #dhclient eth9
+      #apt-get update
+      #apt-get -y install smcroute
+    </exec>
+    <exec seq="start-test1" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+    </exec>
+    <exec seq="start-test2" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+    </exec>
+    <exec seq="start-test3" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+       /root/bin/mcsender_test start 224.10.10.31 1234
+    </exec>
+    <exec seq="stop-test" type="verbatim">
+       killall mcsender
+    </exec>
+  </vm>
+
+  <vm name="provider2" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/provider/">provider</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.32/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+      #export DEBIAN_FRONTEND=noninteractive
+      #dhclient eth9
+      #apt-get update
+      #apt-get -y install smcroute
+    </exec>
+    <exec seq="start-test1" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+    </exec>
+    <exec seq="start-test2" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+    </exec>
+    <exec seq="start-test3" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+       /root/bin/mcsender_test start 224.10.10.31 1234
+    </exec>
+    <exec seq="stop-test" type="verbatim">
+       killall mcsender
+    </exec>
+  </vm>
+
+  <vm name="provider3" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/provider/">provider</shareddir>
+    <if id="1" net="sw1">
+      <ipv4>10.100.0.33/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+      #export DEBIAN_FRONTEND=noninteractive
+      #dhclient eth9
+      #apt-get update
+      #apt-get -y install smcroute
+    </exec>
+    <exec seq="start-test1" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+    </exec>
+    <exec seq="start-test2" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+    </exec>
+    <exec seq="start-test3" type="verbatim">
+       /root/bin/mcsender_test start 224.10.10.11 1234
+       /root/bin/mcsender_test start 224.10.10.21 1234
+       /root/bin/mcsender_test start 224.10.10.31 1234
+    </exec>
+    <exec seq="stop-test" type="verbatim">
+       killall mcsender
+    </exec>
+  </vm>
+
+  <host>
+      <hostif net="sw-mgmt">
+          <ipv4>10.200.0.1/24</ipv4>
+      </hostif>
+  </host>
+  
+</vnx>
