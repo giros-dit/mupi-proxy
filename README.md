@@ -7,8 +7,7 @@ Mupi-proxy (Multiple UPstream Interfaces multicast Proxy) is a proof of concept 
 
 The generic working scenario of mupi-proxy is presented in the figure, where several IP multicast flow providers are connected to upstream interfaces and several clients that consume the multicast flows are connected to downstream interfaces.
 
-![Fig1]
-(https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy-fig1.png)
+![Fig1](https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy-fig1.png)
 
 In this scenario, mupi-proxy is in charge of relaying the control and data multicast flows among clients and providers. Basically it:
 - Relays the IGMP/MLD control requests sent by the clients to the providers following the selection policies configured. For that purpose, mupi-proxy includes a Multicast Upstream Routing Table (MURT) that allows to specify how the upstream interface is selected in terms of the client's IP address, the multicast group and the IP address of the multicast flow source.  
@@ -58,7 +57,8 @@ A Virtual Networks over LinuX (VNX) virtual testbed scenario is distributed to e
 - Three containers (provider1-3) which act as IP multicast flow providers.
 - Six containers (client1-6) which act as clients that request IP multicast flows to the different providers.
 
-((https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy-fig2.png)
+
+![Fig2](https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy-fig2.png)
 
 To start using the mupi-proxy test scenario:
 
