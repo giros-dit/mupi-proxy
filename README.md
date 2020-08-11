@@ -62,10 +62,10 @@ To start using the mupi-proxy test scenario:
 
 [https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova](https://idefix.dit.upm.es/download/vnx/vnx-vm/VNXSDNLAB2020-v1.ova)
 
-  Alternatevily, the scenario can be started from a Linux computer with VNX installed (see
+  Alternatively, the scenario can be started on any Linux computer with VNX installed (see
   http://vnx.dit.upm.es/ for installation details).
 
-2. Start the VNXSDNLAB virtual machine and clone this github repository:
+2. Start the VNXSDNLAB virtual machine, open a terminal and clone this github repository:
 
 ```git clone https://github.com/giros-dit/mupi-proxy.git```
 
