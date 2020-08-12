@@ -1,21 +1,33 @@
-######################################################
+# --------------------------------------------------------------------------------------------
 #
-# Name:        Multiple Upstreams Interfaces Multicast Proxy (mupi-proxy)
+# Name:        Multiple Upstream Interfaces Multicast Proxy (mupi-proxy)
 #
-# Description: Application that manages a switch to be a proxy multicast using IGMPv3 
-#            to provide multicast traffic from two providers to different clients using 
-#            priorities checked in a database
+# Description: Mupi-proxy is a proof of concept implementation of the extensions defined in 
+#              IETF draft-asaeda-pim-multiif-igmpmldproxy-04 to support multiple upstream 
+#              interfaces in IGMP/MLD proxies. It has been implemented for Linux using an 
+#              SDN application running over Ryu controller that controls and Open vSwitch 
+#              in charge of relaying the multicast data flows and IGMP/MLD traffic.
 #
-# Author:      Sandra Garcia
+# Author:      Sandra Garcia (sandra.garcia.serrano at alumnos.upm.es)
 #              David Fernández (david.fernandez at upm.es)
-######################################################
-
-
-######################################################################
-
-#To configure mode: ryu-manager app.py --config-file file.conf
-
-######################################################################
+# --------------------------------------------------------------------------------------------
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+# An online copy of the licence can be found at http://www.gnu.org/copyleft/gpl.html
+# -----------------------------------------------------------------------------------
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event

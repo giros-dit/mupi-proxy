@@ -1,5 +1,33 @@
-#!/usr/bin/python3
-
+# --------------------------------------------------------------------------------------------
+#
+# Name:        Multiple Upstream Interfaces Multicast Proxy (mupi-proxy)
+#
+# Description: Mupi-proxy is a proof of concept implementation of the extensions defined in
+#              IETF draft-asaeda-pim-multiif-igmpmldproxy-04 to support multiple upstream
+#              interfaces in IGMP/MLD proxies. It has been implemented for Linux using an
+#              SDN application running over Ryu controller that controls and Open vSwitch
+#              in charge of relaying the multicast data flows and IGMP/MLD traffic.
+#
+# Author:      David Fernández (david.fernandez at upm.es)
+#              Sandra Garcia (sandra.garcia.serrano at alumnos.upm.es)
+# --------------------------------------------------------------------------------------------
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+# An online copy of the licence can be found at http://www.gnu.org/copyleft/gpl.html
+# -----------------------------------------------------------------------------------
 from netaddr import *
 import secrets
 import json
@@ -192,23 +220,8 @@ class MURT:
         else:
             self.logger.info( '{:17} {:17} {:17} {:12} {:8}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority') )
             self.logger.info( '{:17} {:17} {:17} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
-            #for e in mcast_table:
             for key in mcast_table.keys():
                 e = mcast_table[key]
-                #self.logger.info(e)
-                #if e['client_ip_first'] != '':
-                #    client_ip = str(IPRange(e['client_ip_first'], e['client_ip_last']).cidrs()[0])
-                #else:
-                #    client_ip = ''
-                #if e['mcast_group_first'] != '':
-                #    mcast_group = str(IPRange(e['mcast_group_first'], e['mcast_group_last']).cidrs()[0])
-                #else:
-                #    mcast_group = ''
-                #if e['mcast_src_ip_first'] != '':
-                #    mcast_src_ip = str(IPRange(e['mcast_src_ip_first'], e['mcast_src_ip_last']).cidrs()[0])
-                #else:
-                #    mcast_src_ip = ''
-                #self.logger.info( '{:17} {:17} {:17} {:^12} {:^8}'.format(client_ip, mcast_group, mcast_src_ip, e['upstream_if'], e['priority']) )
                 self.logger.info( '{:17} {:17} {:17} {:^12} {:^8}'.format(e['client_ip'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
             self.logger.info( '{:17} {:17} {:17} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
 
