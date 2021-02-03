@@ -1,4 +1,5 @@
 10.100.0.1      router
+2001:db8:100::1      routerv6
 
 10.100.0.11     client1
 10.100.0.12     client2
@@ -10,3 +11,17 @@
 10.100.0.31     provider1
 10.100.0.32     provider2
 10.100.0.33     provider3
+
+
+
+2001:db8:100::11/64     client1v6
+2001:db8:100::12/64     client2v6
+2001:db8:100::13/64     client3v6
+2001:db8:100::14/64     client4v6
+2001:db8:100::15/64     client5v6
+2001:db8:100::16/64     client6v6
+
+
+2001:db8:100::31/64     provider1v6
+2001:db8:100::32/64     provider2v6
+2001:db8:100::33/64     provider3v6
