@@ -101,7 +101,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -115,13 +115,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.12/24</ipv4>
-      <ipv6>2001:db8:0::12/64</ipv6>
+      <ipv6>2001:db8:100::12/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route> 
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>   
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>   
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -141,7 +141,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route> 
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>  
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>  
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -161,7 +161,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -181,7 +181,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -201,7 +201,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -221,7 +221,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -241,7 +241,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -261,7 +261,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -281,7 +281,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route> 
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>    
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -302,7 +302,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -335,7 +335,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -368,7 +368,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
-    <route type="ipv6" gw="2001:db8:100::1">2001:db8:100::0/32</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -394,6 +394,12 @@ Authors:     David Fernández (david.fernandez at upm.es)
           <ipv4>10.200.0.1/24</ipv4>
           <ipv6>2001:db8:200::1/64</ipv6>
       </hostif>
+      
+      <!--
+      <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+      <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
+      -->
+      
   </host>
   
 </vnx>
