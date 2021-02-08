@@ -133,12 +133,12 @@ class MupiMcastProxy (app_manager.RyuApp):
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_CLEAR_ACTIONS, actions)]
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id, command=ofproto.OFPFC_DELETE, 
-            						out_port=out_port, out_group=ofproto.OFPG_ANY, 
-            						priority=priority, match=match, instructions=inst)
+                                    out_port=out_port, out_group=ofproto.OFPG_ANY, 
+                                    priority=priority, match=match, instructions=inst)
         else:
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority, command=ofproto.OFPFC_DELETE, 
-            						out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY, 
-            						match=match, instructions=inst)
+                                    out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY, 
+                                    match=match, instructions=inst)
         datapath.send_msg(mod)
 
     def do_join(self, in_port, msg, provider, mcast_group):
@@ -259,12 +259,35 @@ class MupiMcastProxy (app_manager.RyuApp):
         in_port = msg.match['in_port']
 
         pkt = packet.Packet(msg.data)
+        print("Paso 1 - Info del paquete recibido: " + str(pkt))
         eth = pkt.get_protocols(ethernet.ethernet)[0]
         #igmp_in = pkt.get_protocol(igmp.igmp)
+        mld_in = False
         icmpv6_in = pkt.get_protocol(icmpv6.icmpv6)
-        mld_in = pkt.get_protocol(icmpv6.mld)
-        #ipv4 = pkt.protocols[1]
-        ipv6 = pkt.protocols[1]
+        if(icmpv6_in):
+            print("Paso 2.1 - ICMPv6 Received: " + str(icmpv6_in))
+            print("Type: " + str(icmpv6_in.type_))
+            print("Data: " + str(icmpv6_in.data))
+            if(icmpv6_in.type_==143):
+                mld_in = icmpv6_in.data
+                print("Paso 3.1 - MLD Received: " + str(mld_in))
+        else:
+            print("Paso 2.2 - No hay ICMPv6")
+
+
+        #IPvX
+        ipv6_in = pkt.get_protocols(ipv6.ipv6)[0]
+        print(ipv6_in)
+        ipv4_in = pkt.get_protocols(ipv4.ipv4)[0]
+        print(ipv4_in)
+
+        if(ipv6_in):
+            print("IPv6")
+        elif(ipv4_in):
+            print("IPv4")
+        else:
+            print("RAUL HAY UN ERROR")
+
 
         is_udp = pkt.get_protocol(udp.udp)
 
@@ -274,39 +297,39 @@ class MupiMcastProxy (app_manager.RyuApp):
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
         
-        if(icmpv6_in && mld_in): #Check if the packet is MLD (ICMP)
-            record = icmpv6_in.records[0]
+        if(mld_in): #Check if the packet is MLD
+            self.logger.info("MLDv2 Multicast Listener Report received")
             log = "SW=%s PORT=%d ICMPv6-MLD received. " % (dpid_to_str(dpid), in_port)
-            
+            #Takes the values from the MLD message (client, group, source)
+            print("MLDv2 Report: " + str(mld_in))
 
+            record = mld_in.records[0]
+            client_ip = ipv6_in.src
+            print("El Cliente que quiere ver la TV es: " + str(client_ip))
+            mcast_group = record.address
+            mcast_src_ip = record.srcs
+            if mcast_src_ip==[]:   #It can be sent or not
+                mcast_src_ip=None
+            else:
+                mcast_src_ip = record.srcs[0]
+            #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
+            upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip) # Returns the upstream if
 
-            #if(igmp_in.msgtype==0x22):
-            if(pkt.get_protocol(icmpv6.mldv2_report)):
-                self.logger.info("MLDv2 Multicast Listener Report received")
-                #Takes the values from the MLD message (client, group, source)
-                client_ip = ipv6.src
-                mcast_group = record.address
-                mcast_src_ip = record.srcs
-                if mcast_src_ip==[]:   #It can be sent or not
-                    mcast_src_ip=None
-                else:
-                    mcast_src_ip = record.srcs[0]
-                #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
-                upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip) # Returns the upstream if
+            if upstream_ifs:
+                for provider in upstream_ifs:
+                    if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
+                        self.logger.info("MLDv2 Join: " + log)
+                        print("JOIN")
+                        self.do_join(in_port, msg, provider, mcast_group)
+                    elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
+                        self.logger.info("MLDv2 Leave: " + log)
+                        print("LEAVE")
+                        self.do_leave(in_port, msg, provider, mcast_group)
+            else: 
+                self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}. mcast_src_ip={mcast_src_ip})')
 
-                if upstream_ifs:
-                    for provider in upstream_ifs:
-                        if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
-                            self.logger.info("MLDv2 Join: " + log)
-                            self.do_join(in_port, msg, provider, mcast_group)
-                        elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
-                            self.logger.info("MLDv2 Leave: " + log)
-                            self.do_leave(in_port, msg, provider, mcast_group)
-                else: 
-                    self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}. mcast_src_ip={mcast_src_ip})')
-
-        elif(is_udp and dst[:8] == '01:00:5e'): #Prints when no client is listening in the multicast group
-            self.logger.info(f"Multicast packet received (src={ipv6.src}, dst_ip={ipv6.dst}), but no clients listening. Discarding...")
+        elif(is_udp and dst[:8] == '33:33:00'): #Prints when no client is listening in the multicast group
+            self.logger.info(f"Multicast packet received (src={ipv6_in.src}, dst_ip={ipv6_in.dst}), but no clients listening. Discarding...")
 
         else: #Normal switch - Example simple_switch_13.py
             self.logger.info('No-MLD packet received')

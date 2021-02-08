@@ -10,6 +10,7 @@
 #
 # Author:      Sandra Garcia (sandra.garcia.serrano at alumnos.upm.es)
 #              David Fernández (david.fernandez at upm.es)
+#              Raul Torres (raul.torres.garcia at alumnos.upm.es)
 # --------------------------------------------------------------------------------------------
 #
 # This program is free software; you can redistribute it and/or
