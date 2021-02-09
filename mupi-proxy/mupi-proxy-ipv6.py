@@ -357,15 +357,19 @@ class MupiMcastProxy (app_manager.RyuApp):
                     for provider in upstream_ifs:
                         if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
                             self.logger.info("IGMPv3 Join: " + log)
-                            self.do_join(in_port, msg, provider, mcast_group)
+                            self.do_join(in_port, msg, provider, mcast_group, ip_version)
                         elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
                             self.logger.info("IGMPv3 Leave: " + log)
-                            self.do_leave(in_port, msg, provider, mcast_group)
+                            self.do_leave(in_port, msg, provider, mcast_group, ip_version)
                 else: 
-                    self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}. mcast_src_ip={mcast_src_ip})')
+                    self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}. mcast_src_ip={mcast_src_ip}, ip_version={ip_version})')
 
         elif(is_udp and dst[:8] == '33:33:00'): #Prints when no client is listening in the multicast group
             self.logger.info(f"Multicast packet received (src={ipv6_in.src}, dst_ip={ipv6_in.dst}), but no clients listening. Discarding...")
+        elif(is_udp and dst[:8] == '01:00:5e'): #Prints when no client is listening in the multicast group
+            self.logger.info(f"Multicast packet received (src={ipv4_in.src}, dst_ip={ipv4_in.dst}), but no clients listening. Discarding...")
+
+
 
         else: #Normal switch - Example simple_switch_13.py
             self.logger.info('No-MLD packet received')
