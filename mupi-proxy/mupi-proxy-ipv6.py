@@ -272,29 +272,21 @@ class MupiMcastProxy (app_manager.RyuApp):
         mld_in = False
         icmpv6_in = pkt.get_protocol(icmpv6.icmpv6)
         if(icmpv6_in):
-            print("Paso 2.1 - ICMPv6 Received: " + str(icmpv6_in))
-            print("Type: " + str(icmpv6_in.type_))
-            print("Data: " + str(icmpv6_in.data))
+            self.logger.info("-- ICMPv6 Packet Received")
             if(icmpv6_in.type_==143):
                 mld_in = icmpv6_in.data
-                print("Paso 3.1 - MLD Received: " + str(mld_in))
-        else:
-            print("Paso 2.2 - No hay ICMPv6")
-
 
         #IPvX
         is_ipv6 = pkt.get_protocols(ipv6.ipv6)
         is_ipv4 = pkt.get_protocols(ipv4.ipv4)
         if(is_ipv6):
-            print("IPv6")
             ipv6_in = is_ipv6[0]
             ip_version = "IPv6"
         elif(is_ipv4):
-            print("IPv4")
             ipv4_in = is_ipv4[0]
             ip_version = "IPv4"
         else:
-            print("RAUL HAY UN ERROR")
+            print("ERROR")
             ip_version = "Error"
 
 
@@ -308,14 +300,13 @@ class MupiMcastProxy (app_manager.RyuApp):
         
         #IPV6
         if(mld_in): #Check if the packet is MLD
-            self.logger.info("MLDv2 Multicast Listener Report received")
+            self.logger.info("---- MLDv2 Multicast Listener Report received")
             log = "SW=%s PORT=%d ICMPv6-MLD received. " % (dpid_to_str(dpid), in_port)
             #Takes the values from the MLD message (client, group, source)
             print("MLDv2 Report: " + str(mld_in))
 
             record = mld_in.records[0]
             client_ip = ipv6_in.src
-            print("El Cliente que quiere ver la TV es: " + str(client_ip))
             mcast_group = record.address
             mcast_src_ip = record.srcs
             if mcast_src_ip==[]:   #It can be sent or not
@@ -341,7 +332,7 @@ class MupiMcastProxy (app_manager.RyuApp):
             record = igmp_in.records[0]
             log = "SW=%s PORT=%d IGMP received. " % (dpid_to_str(dpid), in_port)
             if(igmp_in.msgtype==0x22):
-                self.logger.info("IGMPv3 Membership Report reveived")
+                self.logger.info("---- IGMPv3 Membership Report reveived")
                 #Takes the values from the IGMP message (client, group, source)
                 client_ip = ipv4_in.src
                 mcast_group = record.address
@@ -372,7 +363,7 @@ class MupiMcastProxy (app_manager.RyuApp):
 
 
         else: #Normal switch - Example simple_switch_13.py
-            self.logger.info('No-MLD packet received')
+            self.logger.info("No ICMPv6, No IGMPv3 ---> NORMAL SWITCH")
             #learn a mac address to avoid FLOOD next time.
             self.mac_to_port[dpid][src] = in_port
             self.logger.info(self.mac_to_port)
