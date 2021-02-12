@@ -1,3 +1,0 @@
-#!/bin/bash
-
-ryu-manager /root/ryu/flowmanager/flowmanager.py /root/mupi-proxy/mupi-proxy-ipv6.py --config-file $1

@@ -37,7 +37,7 @@ from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3
 from ryu.ofproto import ofproto_v1_3_parser
 from ryu.lib.dpid import dpid_to_str
-from ryu.lib.packet import packet, ethernet, igmp, ipv4, udp
+from ryu.lib.packet import packet, ethernet, igmp, ipv4, udp, icmpv6, ipv6
 from collections import defaultdict
 from ryu import cfg
 import json
@@ -133,15 +133,15 @@ class MupiMcastProxy (app_manager.RyuApp):
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_CLEAR_ACTIONS, actions)]
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id, command=ofproto.OFPFC_DELETE, 
-            						out_port=out_port, out_group=ofproto.OFPG_ANY, 
-            						priority=priority, match=match, instructions=inst)
+                                    out_port=out_port, out_group=ofproto.OFPG_ANY, 
+                                    priority=priority, match=match, instructions=inst)
         else:
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority, command=ofproto.OFPFC_DELETE, 
-            						out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY, 
-            						match=match, instructions=inst)
+                                    out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY, 
+                                    match=match, instructions=inst)
         datapath.send_msg(mod)
 
-    def do_join(self, in_port, msg, provider, mcast_group):
+    def do_join(self, in_port, msg, provider, mcast_group, ipversion6):
 
         self.logger.debug(f'do_join called: in_port={in_port}, upstream_if={provider}, mcast_grp={mcast_group}')
         datapath = msg.datapath
@@ -165,13 +165,16 @@ class MupiMcastProxy (app_manager.RyuApp):
             self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port] = {'out': False}
             for port in self._to_hosts[dpid][mcast_group]['providers'][provider]['ports']:
                 actions.append(parser.OFPActionOutput(port))
-            match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=mcast_group, in_port=provider)
+            if(ipversion6):
+                match = parser.OFPMatch(eth_type=0x86DD, ip_proto=17, ipv6_dst=mcast_group, in_port=provider)
+            else:
+                match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=mcast_group, in_port=provider)
             self.add_flow(datapath, 1, match, actions, msg.buffer_id)
         if not self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]['out']:
             self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]['out'] = True
             self.logger.info(f"Flow added: in_port={in_port}, upstream_if={provider}, mcast_grp={mcast_group}")
 
-    def do_leave(self, in_port, msg, provider, mcast_group):
+    def do_leave(self, in_port, msg, provider, mcast_group, ipversion6):
         datapath = msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -199,7 +202,10 @@ class MupiMcastProxy (app_manager.RyuApp):
             self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]['out'] = False
         if self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'].get(in_port):
             del self._to_hosts[dpid][mcast_group]['providers'][provider]['ports'][in_port]
-            match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=mcast_group, in_port=provider)
+            if(ipversion6):
+                match = parser.OFPMatch(eth_type=0x86DD, ip_proto=17, ipv6_dst=mcast_group, in_port=provider)
+            else:
+                match = parser.OFPMatch(eth_type=0x0800, ip_proto=17, ipv4_dst=mcast_group, in_port=provider)
             if len(self._to_hosts[dpid][mcast_group]['providers'][provider]['ports']) == 0:
                 self.del_flow(datapath, 1, in_port, match, actions, msg.buffer_id)
             else:
@@ -260,48 +266,79 @@ class MupiMcastProxy (app_manager.RyuApp):
 
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
+        
         igmp_in = pkt.get_protocol(igmp.igmp)
-        ipv4 = pkt.protocols[1]
+        mld_in = False
+        icmpv6_in = pkt.get_protocol(icmpv6.icmpv6)
+        if(icmpv6_in):
+            self.logger.info("-- ICMPv6 Packet Received")
+            if(icmpv6_in.type_==143):
+                mld_in = icmpv6_in.data
+
+        #IPvX
+        is_ipv6 = pkt.get_protocols(ipv6.ipv6)
+        is_ipv4 = pkt.get_protocols(ipv4.ipv4)
+        ipversion6 = False
+        if(is_ipv6):
+            ipv6_in = is_ipv6[0]
+            ipversion6 = True
+        elif(is_ipv4):
+            ipv4_in = is_ipv4[0]
+            ipversion6 = False
+        else:
+            self.logger.info("ERROR")
+
+
         is_udp = pkt.get_protocol(udp.udp)
-        # udp = pkt.protocols[2]
+
         dst = eth.dst
         src = eth.src
 
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
         
-        if(igmp_in): #Check if the packet is IGMP
-            record = igmp_in.records[0]
-            log = "SW=%s PORT=%d IGMP received. " % (dpid_to_str(dpid), in_port)
-            if(igmp_in.msgtype==0x22):
-                self.logger.info("IGMPv3 Membership Report reveived")
-                #Takes the values from the IGMP message (client, group, source)
-                client_ip = ipv4.src
-                mcast_group = record.address
-                mcast_src_ip = record.srcs
-                if mcast_src_ip==[]:   #It can be sent or not
-                    mcast_src_ip=None
-                else:
-                    mcast_src_ip = record.srcs[0]
-                #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
-                upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip) # Returns the upstream if
+        #IPV6
+        if(mld_in or (igmp_in and igmp_in.msgtype==0x22)):
+            self.logger.info("-- Multicast Listener Report received")
+            if(ipversion6):
+                self.logger.info("---- MLDv2 Multicast Listener Report received")
+                log = "SW=%s PORT=%d ICMPv6-MLD received. " % (dpid_to_str(dpid), in_port)
+                mcast_in = mld_in
+                ip_in = ipv6_in
+            else:
+                self.logger.info("---- IGMPv3 Membership Report reveived")
+                log = "SW=%s PORT=%d IGMP received. " % (dpid_to_str(dpid), in_port)
+                mcast_in = igmp_in
+                ip_in = ipv4_in
 
-                if upstream_ifs:
-                    for provider in upstream_ifs:
-                        if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
-                            self.logger.info("IGMPv3 Join: " + log)
-                            self.do_join(in_port, msg, provider, mcast_group)
-                        elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
-                            self.logger.info("IGMPv3 Leave: " + log)
-                            self.do_leave(in_port, msg, provider, mcast_group)
-                else: 
-                    self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}. mcast_src_ip={mcast_src_ip})')
+            record = mcast_in.records[0]
+            client_ip = ip_in.src
+            mcast_group = record.address
+            mcast_src_ip = record.srcs
+            if mcast_src_ip==[]:   #It can be sent or not
+                mcast_src_ip=None
+            else:
+                mcast_src_ip = record.srcs[0]
+            #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
+            upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip) # Returns the upstream if
+            if upstream_ifs:
+                for provider in upstream_ifs:
+                    if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
+                        self.logger.info("Join: " + log)
+                        self.do_join(in_port, msg, provider, mcast_group, ipversion6)
+                    elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
+                        self.logger.info("Leave: " + log)
+                        self.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+            else: 
+                self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip})')
 
+        elif(is_udp and dst[:8] == '33:33:00'): #Prints when no client is listening in the multicast group
+            self.logger.info(f"Multicast packet received (src={ipv6_in.src}, dst_ip={ipv6_in.dst}), but no clients listening. Discarding...")
         elif(is_udp and dst[:8] == '01:00:5e'): #Prints when no client is listening in the multicast group
-            self.logger.info(f"Multicast packet received (src={ipv4.src}, dst_ip={ipv4.dst}), but no clients listening. Discarding...")
+            self.logger.info(f"Multicast packet received (src={ipv4_in.src}, dst_ip={ipv4_in.dst}), but no clients listening. Discarding...")
 
         else: #Normal switch - Example simple_switch_13.py
-            self.logger.info('No-IGMP packet received')
+            self.logger.info("No ICMPv6-MLDv2, No IGMPv3 ---> NORMAL SWITCH")
             #learn a mac address to avoid FLOOD next time.
             self.mac_to_port[dpid][src] = in_port
             self.logger.info(self.mac_to_port)

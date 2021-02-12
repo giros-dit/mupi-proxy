@@ -10,6 +10,7 @@
 #
 # Author:      David Fernández (david.fernandez at upm.es)
 #              Sandra Garcia (sandra.garcia.serrano at alumnos.upm.es)
+#              Raul Torres (raul.torres.garcia at alumnos.upm.es)
 # --------------------------------------------------------------------------------------------
 #
 # This program is free software; you can redistribute it and/or
@@ -218,12 +219,12 @@ class MURT:
 
 
         else:
-            self.logger.info( '{:17} {:17} {:17} {:12} {:8}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority') )
-            self.logger.info( '{:17} {:17} {:17} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
+            self.logger.info( '{:25} {:25} {:25} {:12} {:8}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority') )
+            self.logger.info( '{:25} {:25} {:25} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
             for key in mcast_table.keys():
                 e = mcast_table[key]
-                self.logger.info( '{:17} {:17} {:17} {:^12} {:^8}'.format(e['client_ip'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
-            self.logger.info( '{:17} {:17} {:17} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
+                self.logger.info( '{:25} {:25} {:25} {:^12} {:^8}'.format(e['client_ip'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
+            self.logger.info( '{:25} {:25} {:25} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
 
     def get_mcast_table(self, format, extended):
 

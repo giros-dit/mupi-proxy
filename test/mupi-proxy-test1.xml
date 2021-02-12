@@ -13,6 +13,7 @@ Description: Basic scenario to test the mupy-proxy implementation.
 
 Authors:     David Fernández (david.fernandez at upm.es)
              Sandra Garcia (sandra.garcia.serrano at alumnos.upm.es)
+             Raul Torres (raul.torres.garcia at alumnos.upm.es)
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -65,6 +66,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <!--shareddir root="/root/ryu/">ryu</shareddir-->
     <if id="1" net="sw-mgmt">
       <ipv4>10.200.0.2/24</ipv4>
+      <ipv6>2001:db8:200::2/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
@@ -93,11 +95,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.11/24</ipv4>
+      <ipv6>2001:db8:100::11/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -111,11 +115,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.12/24</ipv4>
+      <ipv6>2001:db8:100::12/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route> 
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>   
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -129,11 +135,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.13/24</ipv4>
+      <ipv6>2001:db8:100::13/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route> 
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>  
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -147,11 +155,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.14/24</ipv4>
+      <ipv6>2001:db8:100::14/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -165,11 +175,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.15/24</ipv4>
+      <ipv6>2001:db8:100::15/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -183,11 +195,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.16/24</ipv4>
+      <ipv6>2001:db8:100::16/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -201,11 +215,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.17/24</ipv4>
+      <ipv6>2001:db8:100::17/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -219,11 +235,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.18/24</ipv4>
+      <ipv6>2001:db8:100::18/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -237,11 +255,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.19/24</ipv4>
+      <ipv6>2001:db8:100::19/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -255,11 +275,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/client/">client</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.20/24</ipv4>
+      <ipv6>2001:db8:100::20/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
-    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>    
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route> 
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>    
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -274,11 +296,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/provider/">provider</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.31/24</ipv4>
+      <ipv6>2001:db8:100::31/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -288,11 +312,17 @@ Authors:     David Fernández (david.fernandez at upm.es)
       #apt-get update
       #apt-get -y install smcroute
     </exec>
-    <exec seq="start-test1" type="verbatim">
+    <exec seq="start-test1-ipv4" type="verbatim">
        /root/bin/mcsender_test start 224.10.10.0 1234
        /root/bin/mcsender_test start 224.10.10.1 1234
        /root/bin/mcsender_test start 224.10.10.2 1234
        /root/bin/mcsender_test start 224.10.10.3 1234
+    </exec>
+    <exec seq="start-test1-ipv6" type="verbatim">
+       /root/bin/mcsender_test start ff02::101 1234
+       /root/bin/mcsender_test start ff02::102 1234
+       /root/bin/mcsender_test start ff02::103 1234
+       /root/bin/mcsender_test start ff02::104 1234
     </exec>
     <exec seq="stop-test" type="verbatim">
        killall mcsender
@@ -305,11 +335,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/provider/">provider</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.32/24</ipv4>
+      <ipv6>2001:db8:100::32/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -324,6 +356,12 @@ Authors:     David Fernández (david.fernandez at upm.es)
        /root/bin/mcsender_test start 224.10.10.1 1234
        /root/bin/mcsender_test start 224.10.10.2 1234
        /root/bin/mcsender_test start 224.10.10.3 1234
+    </exec>
+    <exec seq="start-test1-ipv6" type="verbatim">
+       /root/bin/mcsender_test start ff02::101 1234
+       /root/bin/mcsender_test start ff02::102 1234
+       /root/bin/mcsender_test start ff02::103 1234
+       /root/bin/mcsender_test start ff02::104 1234
     </exec>
     <exec seq="stop-test" type="verbatim">
        killall mcsender
@@ -336,11 +374,13 @@ Authors:     David Fernández (david.fernandez at upm.es)
     <shareddir root="/root/provider/">provider</shareddir>
     <if id="1" net="sw1">
       <ipv4>10.100.0.33/24</ipv4>
+      <ipv6>2001:db8:100::33/64</ipv6>
     </if>
     <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
     <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
     <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
     <exec seq="on_boot" type="verbatim">
       cat /tmp/hosts >> /etc/hosts
@@ -356,6 +396,12 @@ Authors:     David Fernández (david.fernandez at upm.es)
        /root/bin/mcsender_test start 224.10.10.2 1234
        /root/bin/mcsender_test start 224.10.10.3 1234
     </exec>
+    <exec seq="start-test1-ipv6" type="verbatim">
+       /root/bin/mcsender_test start ff02::101 1234
+       /root/bin/mcsender_test start ff02::102 1234
+       /root/bin/mcsender_test start ff02::103 1234
+       /root/bin/mcsender_test start ff02::104 1234
+    </exec>
     <exec seq="stop-test" type="verbatim">
        killall mcsender
     </exec>
@@ -364,7 +410,14 @@ Authors:     David Fernández (david.fernandez at upm.es)
   <host>
       <hostif net="sw-mgmt">
           <ipv4>10.200.0.1/24</ipv4>
+          <ipv6>2001:db8:200::1/64</ipv6>
       </hostif>
+      
+      <!--
+      <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+      <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
+      -->
+      
   </host>
   
 </vnx>
