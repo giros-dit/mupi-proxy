@@ -351,7 +351,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       #apt-get update
       #apt-get -y install smcroute
     </exec>
-    <exec seq="start-test1" type="verbatim">
+    <exec seq="start-test1-ipv4" type="verbatim">
        /root/bin/mcsender_test start 224.10.10.0 1234
        /root/bin/mcsender_test start 224.10.10.1 1234
        /root/bin/mcsender_test start 224.10.10.2 1234
@@ -390,7 +390,7 @@ Authors:     David Fernández (david.fernandez at upm.es)
       #apt-get update
       #apt-get -y install smcroute
     </exec>
-    <exec seq="start-test1" type="verbatim">
+    <exec seq="start-test1-ipv4" type="verbatim">
        /root/bin/mcsender_test start 224.10.10.0 1234
        /root/bin/mcsender_test start 224.10.10.1 1234
        /root/bin/mcsender_test start 224.10.10.2 1234
