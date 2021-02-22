@@ -1,0 +1,2 @@
+fastapi[all]
+motor==2.3.1

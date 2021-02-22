@@ -312,20 +312,30 @@ Authors:     David Fernández (david.fernandez at upm.es)
       #apt-get update
       #apt-get -y install smcroute
     </exec>
-    <exec seq="start-test1-ipv4" type="verbatim">
+    <exec seq="start-test1-mcsender-ipv4" type="verbatim">
        /root/bin/mcsender_test start 224.10.10.0 1234
        /root/bin/mcsender_test start 224.10.10.1 1234
        /root/bin/mcsender_test start 224.10.10.2 1234
        /root/bin/mcsender_test start 224.10.10.3 1234
     </exec>
-    <exec seq="start-test1-ipv6" type="verbatim">
+    <exec seq="start-test1-mcsender-ipv6" type="verbatim">
        /root/bin/mcsender_test start ff02::101 1234
        /root/bin/mcsender_test start ff02::102 1234
        /root/bin/mcsender_test start ff02::103 1234
        /root/bin/mcsender_test start ff02::104 1234
     </exec>
-    <exec seq="stop-test" type="verbatim">
+    <exec seq="start-test1-mcjoin-ipv4" type="verbatim">
+       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 1234
+    </exec>
+    <exec seq="start-test1-mcjoin-ipv6" type="verbatim">
+       /root/bin/mcjoin_test start ff02::101 ff02::102 ff02::103 ff02::104 1234
+    </exec>
+
+    <exec seq="stop-test-mcsender" type="verbatim">
        killall mcsender
+    </exec>
+    <exec seq="stop-test-mcjoin" type="verbatim">
+       killall mcjoin
     </exec>
   </vm>
 
@@ -351,20 +361,29 @@ Authors:     David Fernández (david.fernandez at upm.es)
       #apt-get update
       #apt-get -y install smcroute
     </exec>
-    <exec seq="start-test1-ipv4" type="verbatim">
+    <exec seq="start-test1-mcsender-ipv4" type="verbatim">
        /root/bin/mcsender_test start 224.10.10.0 1234
        /root/bin/mcsender_test start 224.10.10.1 1234
        /root/bin/mcsender_test start 224.10.10.2 1234
        /root/bin/mcsender_test start 224.10.10.3 1234
     </exec>
-    <exec seq="start-test1-ipv6" type="verbatim">
+    <exec seq="start-test1-mcsender-ipv6" type="verbatim">
        /root/bin/mcsender_test start ff02::101 1234
        /root/bin/mcsender_test start ff02::102 1234
        /root/bin/mcsender_test start ff02::103 1234
        /root/bin/mcsender_test start ff02::104 1234
     </exec>
-    <exec seq="stop-test" type="verbatim">
+    <exec seq="start-test1-mcjoin-ipv4" type="verbatim">
+       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 1234
+    </exec>
+    <exec seq="start-test1-mcjoin-ipv6" type="verbatim">
+       /root/bin/mcjoin_test start ff02::101 ff02::102 ff02::103 ff02::104 1234
+    </exec>
+     <exec seq="stop-test-mcsender" type="verbatim">
        killall mcsender
+    </exec>
+    <exec seq="stop-test-mcjoin" type="verbatim">
+       killall mcjoin
     </exec>
   </vm>
 
@@ -390,20 +409,29 @@ Authors:     David Fernández (david.fernandez at upm.es)
       #apt-get update
       #apt-get -y install smcroute
     </exec>
-    <exec seq="start-test1-ipv4" type="verbatim">
+    <exec seq="start-test1-mcsender-ipv4" type="verbatim">
        /root/bin/mcsender_test start 224.10.10.0 1234
        /root/bin/mcsender_test start 224.10.10.1 1234
        /root/bin/mcsender_test start 224.10.10.2 1234
        /root/bin/mcsender_test start 224.10.10.3 1234
     </exec>
-    <exec seq="start-test1-ipv6" type="verbatim">
+    <exec seq="start-test1-mcsender-ipv6" type="verbatim">
        /root/bin/mcsender_test start ff02::101 1234
        /root/bin/mcsender_test start ff02::102 1234
        /root/bin/mcsender_test start ff02::103 1234
        /root/bin/mcsender_test start ff02::104 1234
     </exec>
-    <exec seq="stop-test" type="verbatim">
+    <exec seq="start-test1-mcjoin-ipv4" type="verbatim">
+       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 1234
+    </exec>
+    <exec seq="start-test1-mcjoin-ipv6" type="verbatim">
+       /root/bin/mcjoin_test start ff02::101 ff02::102 ff02::103 ff02::104 1234
+    </exec>
+    <exec seq="stop-test-mcsender" type="verbatim">
        killall mcsender
+    </exec>
+    <exec seq="stop-test-mcjoin" type="verbatim">
+       killall mcjoin
     </exec>
   </vm>
 
