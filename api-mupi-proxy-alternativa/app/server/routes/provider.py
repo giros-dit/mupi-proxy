@@ -18,14 +18,22 @@ from ..models.provider import (
 
 router = APIRouter()
 
-
-@router.post("/", response_description="Provider data added into the database")
+@router.post("/", response_description="Provider data added into the database", summary="Create a provider")
 async def add_provider_data(provider: Provider = Body(...)):
+    """
+    Create a provider with all the information:
+
+    - **mcast_src_ip**: source ip address
+    - **upstream_if**: upstream interface
+    - **mcast_groups**: multicast ip address
+    - **description**: Name of the provider
+    """
     provider = jsonable_encoder(provider)
     new_provider = await add_provider(provider)
     return ResponseModel(new_provider, "Provider added successfully.")
 
-@router.get("/", response_description="Providers retrieved")
+@router.get("/", response_description="Providers retrieved", summary="Get all providers", description="Get all providers stored in the database",
+)
 async def get_providers():
     providers = await retrieve_providers()
     if providers:
