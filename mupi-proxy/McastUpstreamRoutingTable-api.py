@@ -88,21 +88,11 @@ class MURT:
                 self.logger.error(f'-- ERROR: {entry[2]} is not a valid IP address or network.')
                 return -1
 
-        # downstream interface
-        if ( entry[5] == '' ):
-            downstream_if = ''
-        else:
-            try:
-                downstream_if = entry[5]
-            except ValueError:
-                self.logger.error(f'-- ERROR: {entry[5]} is not a valid downstream interface')
-                return -1
-
 
         self.mcast_upstream_routing[id] = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, \
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=entry[3], priority=entry[4], downstream_if=downstream_if)
+                                   upstream_if=entry[3], priority=entry[4])
         return id
 
 
@@ -164,9 +154,9 @@ class MURT:
         return -1
 
 
-    def get_upstream_if(self, client_ip, mcast_group, mcast_src_ip, downstream_if):
+    def get_upstream_if(self, client_ip, mcast_group, mcast_src_ip):
         # Dives the mcast-proxy routing table and gets the highest priority entries that match the query
-        self.logger.debug(f'get_upstream_if query: client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip}, downstream_if={downstream_if}')
+        self.logger.debug(f'get_upstream_if query: client_ip={client_ip}, mcast_group={mcast_group}. mcast_src_ip={mcast_src_ip}')
         match_entries = {}
         upstream_ifs = []
 
@@ -182,15 +172,13 @@ class MURT:
             if ( mcast_src_ip != '' and mcast_src_ip != None ):
                 if (      ( e['client_ip_first'] == ''    or ( client_ip_num    >= e['client_ip_first']    and client_ip_num    <= e['client_ip_last'] ) ) 
                       and ( e['mcast_group_first'] == ''  or ( mcast_group_num  >= e['mcast_group_first']  and mcast_group_num  <= e['mcast_group_last']  ))
-                      and ( e['mcast_src_ip_first'] == '' or ( mcast_src_ip_num >= e['mcast_src_ip_first'] and mcast_src_ip_num <= e['mcast_src_ip_last'] ))
-                      and ( e['downstream_if'] == '' or ( downstream_if == e['downstream_if']) )):
+                      and ( e['mcast_src_ip_first'] == '' or ( mcast_src_ip_num >= e['mcast_src_ip_first'] and mcast_src_ip_num <= e['mcast_src_ip_last'] )) ):
                     match_entries[key] = e
                     if e['priority'] > max_priority:
                         max_priority = e['priority']
             else:
                 if (      ( e['client_ip_first'] == ''    or ( client_ip_num    >= e['client_ip_first']    and client_ip_num    <= e['client_ip_last'] ) ) 
-                        and ( e['mcast_group_first'] == ''  or ( mcast_group_num  >= e['mcast_group_first']  and mcast_group_num  <= e['mcast_group_last']  )) 
-                        and ( e['downstream_if'] == '' or ( downstream_if == e['downstream_if']) )):
+                        and ( e['mcast_group_first'] == ''  or ( mcast_group_num  >= e['mcast_group_first']  and mcast_group_num  <= e['mcast_group_last']  )) ):
                     match_entries[key] = e
                     if e['priority'] > max_priority:
                         max_priority = e['priority']
@@ -209,8 +197,8 @@ class MURT:
 
     def print_mcast_table(self, mcast_table, extended):
         if extended:
-            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:12} {:16}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'downstream_if','id') )
-            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
+            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:16}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'id') )
+            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
             #for e in mcast_table:
             for key in mcast_table.keys():
                 e = mcast_table[key]
@@ -226,17 +214,17 @@ class MURT:
                     mcast_src_ip = str(IPAddress(e['mcast_src_ip_first'])) + '-' + str(IPAddress(e['mcast_src_ip_last']))
                 else:
                     mcast_src_ip = ''
-                self.logger.info( '{:31} {:31} {:31} {:^12} {:^8} {:^12} {}'.format(client_ip, mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], e['downstream_if'], key ))
-            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
+                self.logger.info( '{:31} {:31} {:31} {:^12} {:^8} {}'.format(client_ip, mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], key ))
+            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
 
 
         else:
-            self.logger.info( '{:25} {:25} {:25} {:12} {:8} {:12}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'downstream_if') )
-            self.logger.info( '{:25} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '-----------------', '-----------------', '------------', '--------', '------------') )
+            self.logger.info( '{:25} {:25} {:25} {:12} {:8}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority') )
+            self.logger.info( '{:25} {:25} {:25} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
             for key in mcast_table.keys():
                 e = mcast_table[key]
-                self.logger.info( '{:25} {:25} {:25} {:^12} {:^8} {:^12}'.format(e['client_ip'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority'], e['downstream_if']) )
-            self.logger.info( '{:25} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '-----------------', '-----------------', '------------', '--------', '------------') )
+                self.logger.info( '{:25} {:25} {:25} {:^12} {:^8}'.format(e['client_ip'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
+            self.logger.info( '{:25} {:25} {:25} {:12} {:8}'.format('-----------------', '-----------------', '-----------------', '------------', '--------') )
 
     def get_mcast_table(self, format, extended):
 
@@ -248,6 +236,6 @@ class MURT:
                 for key in self.mcast_upstream_routing.keys():
                     e = self.mcast_upstream_routing[key]
                     mcast_table[key] = dict(client_ip=e['client_ip'], mcast_group=e['mcast_group'], mcast_src_ip=e['mcast_src_ip'],
-                                            upstream_if=e['upstream_if'], priority=e['priority'], downstream_if=e['downstream_if'])
+                                            upstream_if=e['upstream_if'], priority=e['priority'])
                 return json.dumps(mcast_table, indent=4)
 

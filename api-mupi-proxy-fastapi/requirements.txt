@@ -2,3 +2,5 @@ fastapi[all]
 motor==2.3.1
 pytest
 python-multipart
+dataset
+pymongo
