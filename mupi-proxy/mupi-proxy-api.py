@@ -44,153 +44,12 @@ import json
 #import dataset
 #import sys
 import re
-import McastUpstreamRoutingTable
+import McastUpstreamRoutingTableApi
 
 from ryu.app.wsgi import ControllerBase
 from ryu.app.wsgi import Response
-from webob import Response
 from ryu.app.wsgi import route
 from ryu.app.wsgi import WSGIApplication
-
-
-# =============================
-#          REST API
-# =============================
-#
-#  Note: specify switch and vlan group, as follows.
-#   {switch-id} : 'all' or switchID
-#   {vlan-id}   : 'all' or vlanID
-#
-# about queue status
-#
-# get status of queue
-# GET /qos/queue/status/{switch-id}
-#
-# about queues
-# get a queue configurations
-# GET /qos/queue/{switch-id}
-#
-# set a queue to the switches
-# POST /qos/queue/{switch-id}
-#
-# request body format:
-#  {"port_name":"<name of port>",
-#   "type": "<linux-htb or linux-other>",
-#   "max-rate": "<int>",
-#   "queues":[{"max_rate": "<int>", "min_rate": "<int>"},...]}
-#
-#   Note: This operation override
-#         previous configurations.
-#   Note: Queue configurations are available for
-#         OpenvSwitch.
-#   Note: port_name is optional argument.
-#         If does not pass the port_name argument,
-#         all ports are target for configuration.
-#
-# delete queue
-# DELETE /qos/queue/{swtich-id}
-#
-#   Note: This operation delete relation of qos record from
-#         qos colum in Port table. Therefore,
-#         QoS records and Queue records will remain.
-#
-# about qos rules
-#
-# get rules of qos
-# * for no vlan
-# GET /qos/rules/{switch-id}
-#
-# * for specific vlan group
-# GET /qos/rules/{switch-id}/{vlan-id}
-#
-# set a qos rules
-#
-#   QoS rules will do the processing pipeline,
-#   which entries are register the first table (by default table id 0)
-#   and process will apply and go to next table.
-#
-# * for no vlan
-# POST /qos/{switch-id}
-#
-# * for specific vlan group
-# POST /qos/{switch-id}/{vlan-id}
-#
-#  request body format:
-#   {"priority": "<value>",
-#    "match": {"<field1>": "<value1>", "<field2>": "<value2>",...},
-#    "actions": {"<action1>": "<value1>", "<action2>": "<value2>",...}
-#   }
-#
-#  Description
-#    * priority field
-#     <value>
-#    "0 to 65533"
-#
-#   Note: When "priority" has not been set up,
-#         "priority: 1" is set to "priority".
-#
-#    * match field
-#     <field> : <value>
-#    "in_port" : "<int>"
-#    "dl_src"  : "<xx:xx:xx:xx:xx:xx>"
-#    "dl_dst"  : "<xx:xx:xx:xx:xx:xx>"
-#    "dl_type" : "<ARP or IPv4 or IPv6>"
-#    "nw_src"  : "<A.B.C.D/M>"
-#    "nw_dst"  : "<A.B.C.D/M>"
-#    "ipv6_src": "<xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/M>"
-#    "ipv6_dst": "<xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/M>"
-#    "nw_proto": "<TCP or UDP or ICMP or ICMPv6>"
-#    "tp_src"  : "<int>"
-#    "tp_dst"  : "<int>"
-#    "ip_dscp" : "<int>"
-#
-#    * actions field
-#     <field> : <value>
-#    "mark": <dscp-value>
-#    sets the IPv4 ToS/DSCP field to tos.
-#    "meter": <meter-id>
-#    apply meter entry
-#    "queue": <queue-id>
-#    register queue specified by queue-id
-#
-#   Note: When "actions" has not been set up,
-#         "queue: 0" is set to "actions".
-#
-# delete a qos rules
-# * for no vlan
-# DELETE /qos/rule/{switch-id}
-#
-# * for specific vlan group
-# DELETE /qos/{switch-id}/{vlan-id}
-#
-#  request body format:
-#   {"<field>":"<value>"}
-#
-#     <field>  : <value>
-#    "qos_id" : "<int>" or "all"
-#
-# about meter entries
-#
-# set a meter entry
-# POST /qos/meter/{switch-id}
-#
-#  request body format:
-#   {"meter_id": <int>,
-#    "bands":[{"action": "<DROP or DSCP_REMARK>",
-#              "flag": "<KBPS or PKTPS or BURST or STATS"
-#              "burst_size": <int>,
-#              "rate": <int>,
-#              "prec_level": <int>},...]}
-#
-# delete a meter entry
-# DELETE /qos/meter/{switch-id}
-#
-#  request body format:
-#   {"<field>":"<value>"}
-#
-#     <field>  : <value>
-#    "meter_id" : "<int>"
-#
 
 
 mupi_proxy_instance_name = 'mupi_proxy_api_app'
@@ -209,7 +68,7 @@ class MupiMcastProxy (app_manager.RyuApp):
         # Variable initialization
         self.mac_to_port = {}
         self._to_hosts = {}
-        self.murt = McastUpstreamRoutingTable.MURT(self.logger)
+        self.murt = McastUpstreamRoutingTableApi.MURT(self.logger)
         wsgi = kwargs['wsgi']
         wsgi.register(MupiProxyApi,{mupi_proxy_instance_name: self})
 
@@ -237,7 +96,7 @@ class MupiMcastProxy (app_manager.RyuApp):
             #print(f'{l}')
             f = l.split(',')
             #print( '{:17} {:17} {:17} {:12} {:8}'.format(f[0].strip(), f[1].strip(), f[2].strip(), f[3].strip(), f[4].strip()) )
-            e = [ f[0].strip(), f[1].strip(), f[2].strip(), int(f[3].strip()), int(f[4].strip()) ]
+            e = [ f[0].strip(), f[1].strip(), f[2].strip(), int(f[3].strip()), int(f[4].strip()), f[5].strip()]
             #print (e)
             id = self.murt.add_entry(e)
             if id:
@@ -473,7 +332,7 @@ class MupiMcastProxy (app_manager.RyuApp):
             else:
                 mcast_src_ip = record.srcs[0]
             #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
-            upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip) # Returns the upstream if
+            upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if
             if upstream_ifs:
                 for provider in upstream_ifs:
                     if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
@@ -519,37 +378,102 @@ class MupiMcastProxy (app_manager.RyuApp):
 
 
 
-#API REST
+
+###############################################
+#             NORTHBOUND INTERFACE            #
+#                   API REST                  #
+###############################################
 class MupiProxyApi(ControllerBase):
     def __init__(self, req, link, data, **config):
         super(MupiProxyApi, self).__init__(req, link, data, **config)
         self.mupi_proxy_api_rest = data[mupi_proxy_instance_name]
 
 
-    @route('simpleswitch', url, methods=['GET'], requirements={'dpid': dpid_lib.DPID_PATTERN})
-    def list_mac_table(self, req, **kwargs):
-        simple_switch = self.simple_switch_app
-        dpid = dpid_lib.str_to_dpid(kwargs['dpid'])
-        if dpid not in simple_switch.mac_to_port:
+    ###############################################
+    #MURT ENTRY
+    ###############################################
+    @route('mupiproxy', BASE_URL + '/murtentries', methods=['GET'])
+    def get_murt_entries(self, req, **kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        murtentries = mupi_proxy.murt.retrieve_murt_entries()
+        if murtentries:
+            body = json.dumps(murtentries, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
             return Response(status=404)
-        mac_table = simple_switch.mac_to_port.get(dpid, {})
-        body = json.dumps(mac_table)
-        return Response(content_type='application/json', body=body)
 
+    @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['GET'])
+    def get_murt_entry(self, req, entry_id, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        murt_entry = mupi_proxy.murt.retrieve_murt_entry(entry_id)
+        if murt_entry:
+            body = json.dumps(murt_entry, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            response = "No murt entry with id: " + str(entry_id)
+            body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=404, body=body)
 
-    @route('simpleswitch', url, methods=['PUT'], requirements={'dpid': dpid_lib.DPID_PATTERN})
-    def put_mac_table(self, req, **kwargs):
-        simple_switch = self.simple_switch_app
-        dpid = dpid_lib.str_to_dpid(kwargs['dpid'])
+    @route('mupiproxy', BASE_URL + '/murtentries', methods=['POST'])
+    def post_murt_entry(self, req, **kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_entry = req.json if req.body else {}
         except ValueError:
             raise Response(status=400)
-        if dpid not in simple_switch.mac_to_port:
-            return Response(status=404)
         try:
-            mac_table = simple_switch.set_mac_to_port(dpid, new_entry)
-            body = json.dumps(mac_table)
-            return Response(content_type='application/json', body=body)
+            entry_added = mupi_proxy.murt.add_murt_entry(new_entry)
+            if entry_added:
+                if len(entry_added) == 1:
+                    response = "Duplicated entry"
+                    body = json.dumps(response, indent=4)
+                    return Response(content_type='application/json', status=404, body=body)
+                else:
+                    body = json.dumps(entry_added, indent=4)
+                    return Response(content_type='application/json', status=200, body=body)
         except Exception as e:
             return Response(status=500)
+
+    @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['DELETE'])
+    def delete_murt_entry(self, req, entry_id, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        if mupi_proxy.murt.delete_murt_entry(entry_id):
+            response = {"Deleted":"Success"}
+            body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            return Response(status=404)
+
+    @route('mupiproxy', BASE_URL + '/murtentries', methods=['DELETE'])
+    def delete_murt_entries(self, req, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        if mupi_proxy.murt.delete_murt_entries():
+            response = {"Deleted All":"Success"}
+            body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            return Response(status=404)
+
+    @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['PUT'])
+    def update_murt_entry(self, req, entry_id, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        try:
+            new_data = req.json if req.body else {}
+        except ValueError:
+            raise Response(status=400)
+        updated_murt_entry = mupi_proxy.murt.update_murt_entry(entry_id, new_data)
+        if updated_murt_entry:
+            body = json.dumps(updated_murt_entry, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            return Response(status=404)
+
+
+    ###############################################
+    #PROVIDER
+    ###############################################
+
+
+    ###############################################
+    #SDN CONTROLLER
+    ###############################################
