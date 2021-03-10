@@ -576,12 +576,13 @@ class MURT:
                                    upstream_if=upstream_if, priority=priority, downstream_if=downstream_if)
          
 
+            formated_entry = self.murtentry_helper(new_entry)
+            myquery = { "_id": id }
+            self.db.murtentries.update(myquery, formated_entry)
+            
+            new_entry["_id"]=id
             self.mcast_upstream_routing[id] = new_entry
             updated_murtentry = self.retrieve_murt_entry(id)
-
-            myquery = { "_id": id }
-            self.db.murtentries.update(myquery, new_entry)
-
             return self.murtentry_helper(updated_murtentry)
 
 
