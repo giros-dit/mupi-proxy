@@ -118,9 +118,9 @@ class MURT:
                     return -1
 
             self.mcast_upstream_routing[id] = dict(_id=id, client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, \
-                                   mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
+                                   downstream_if=downstream_if, mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=entry["upstream_if"], priority=entry["priority"], downstream_if=downstream_if)
+                                   upstream_if=entry["upstream_if"], priority=entry["priority"])
            
 
     #Upload from a configuration file
@@ -145,44 +145,44 @@ class MURT:
                 return -1
 
         # mcast_group
-        if ( entry[1] == '' ):
+        if ( entry[2] == '' ):
             mcast_group = mcast_group_first = mcast_group_last = ''
         else:
             try:
-                mcast_group = entry[1]
-                mcast_group_first = IPNetwork(entry[1]).first
-                mcast_group_last  = IPNetwork(entry[1]).last
-            except ValueError:
-                self.logger.error(f'-- ERROR: {entry[1]} is not a valid IP address or network.')
-                return -1
-
-        # mcast_src_ip
-        if ( entry[2] == '' ):
-            mcast_src_ip = mcast_src_ip_first = mcast_src_ip_last = ''
-        else:
-            try:
-                mcast_src_ip = entry[2]
-                mcast_src_ip_first = IPNetwork(entry[2]).first
-                mcast_src_ip_last  = IPNetwork(entry[2]).last
+                mcast_group = entry[2]
+                mcast_group_first = IPNetwork(entry[2]).first
+                mcast_group_last  = IPNetwork(entry[2]).last
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry[2]} is not a valid IP address or network.')
                 return -1
 
+        # mcast_src_ip
+        if ( entry[3] == '' ):
+            mcast_src_ip = mcast_src_ip_first = mcast_src_ip_last = ''
+        else:
+            try:
+                mcast_src_ip = entry[3]
+                mcast_src_ip_first = IPNetwork(entry[3]).first
+                mcast_src_ip_last  = IPNetwork(entry[3]).last
+            except ValueError:
+                self.logger.error(f'-- ERROR: {entry[3]} is not a valid IP address or network.')
+                return -1
+
         # downstream interface
-        if ( entry[5] == '' ):
+        if ( entry[1] == '' ):
             downstream_if = ''
         else:
             try:
-                downstream_if = entry[5]
+                downstream_if = entry[1]
             except ValueError:
-                self.logger.error(f'-- ERROR: {entry[5]} is not a valid downstream interface')
+                self.logger.error(f'-- ERROR: {entry[1]} is not a valid downstream interface')
                 return -1
 
 
-        new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, \
+        new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if, \
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=entry[3], priority=entry[4], downstream_if=downstream_if)
+                                   upstream_if=entry[4], priority=entry[5])
 
         proposed_id = self.dict_hash(new_entry)
         if proposed_id in self.mcast_upstream_routing:
@@ -195,70 +195,10 @@ class MURT:
             #entry_id.acknowledged PARA COMPROBACIONES
             entry_id = str(result.inserted_id)
             self.mcast_upstream_routing[entry_id] = dict(_id=entry_id, client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, \
-                                       mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
+                                       downstream_if=downstream_if, mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                        mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                       upstream_if=entry[3], priority=entry[4], downstream_if=downstream_if)
+                                       upstream_if=entry[4], priority=entry[5])
             return entry_id
-
-
-
-    def del_entry_by_id(self, id):
-        
-        del self.mcast_upstream_routing[id]
-
-
-    def del_entry_by_data(self, entry):
-        
-        self.logger.debug(entry)
-
-        # client_ip
-        if ( entry[0] == '' ):
-            client_ip_first = ''
-            client_ip_last  = ''
-        else:
-            try:
-                client_ip_first = IPNetwork(entry[0]).first
-                client_ip_last  = IPNetwork(entry[0]).last
-            except ValueError:
-                self.logger.error(f'-- ERROR: {entry[0]} is not a valid IP address or network.')
-                return -1
-
-        # mcast_group
-        if ( entry[1] == '' ):
-            mcast_group_first = ''
-            mcast_group_last  = ''
-        else:
-            try:
-                mcast_group_first = IPNetwork(entry[1]).first
-                mcast_group_last  = IPNetwork(entry[1]).last
-            except ValueError:
-                self.logger.error(f'-- ERROR: {entry[1]} is not a valid IP address or network.')
-                return -1
-
-        # mcast_src_ip
-        if ( entry[2] == '' ):
-            mcast_src_ip_first = ''
-            mcast_src_ip_last  = ''
-        else:
-            try:
-                mcast_src_ip_first = IPNetwork(entry[2]).first
-                mcast_src_ip_last  = IPNetwork(entry[2]).last
-            except ValueError:
-                self.logger.error(f'-- ERROR: {entry[2]} is not a valid IP address or network.')
-                return -1
-
-        for key in self.mcast_upstream_routing.keys():
-            e = self.mcast_upstream_routing[key]
-            if (      ( ( client_ip_first == ''   and e['client_ip_first'] == '' )  
-                     or ( client_ip_first    == e['client_ip_first']    and client_ip_last    == e['client_ip_last'] ) ) 
-                  and ( ( mcast_group_first == '' and e['mcast_group_first'] == '' ) 
-                     or ( mcast_group_first  == e['mcast_group_first']  and mcast_group_last  == e['mcast_group_last']  ))
-                  and ( ( mcast_src_ip_first == '' and e['mcast_src_ip_first'] == '' )
-                     or ( mcast_src_ip_first >= e['mcast_src_ip_first'] and mcast_src_ip_last <= e['mcast_src_ip_last'] )) ):
-                del self.mcast_upstream_routing[key]
-                return key
-        return -1
-
 
 
     def get_upstream_if(self, client_ip, mcast_group, mcast_src_ip, downstream_if):
@@ -306,8 +246,8 @@ class MURT:
 
     def print_mcast_table(self, mcast_table, extended):
         if extended:
-            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:12} {:16}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'downstream_if','id') )
-            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
+            self.logger.info( '{:31} {:12} {:31} {:31} {:12} {:8} {:16}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority','id') )
+            self.logger.info( '{:31} {:12} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
             #for e in mcast_table:
             for key in mcast_table.keys():
                 e = mcast_table[key]
@@ -323,17 +263,17 @@ class MURT:
                     mcast_src_ip = str(IPAddress(e['mcast_src_ip_first'])) + '-' + str(IPAddress(e['mcast_src_ip_last']))
                 else:
                     mcast_src_ip = ''
-                self.logger.info( '{:31} {:31} {:31} {:^12} {:^8} {:^12} {}'.format(client_ip, mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], e['downstream_if'], key ))
-            self.logger.info( '{:31} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
+                self.logger.info( '{:31} {:^12} {:31} {:31} {:^12} {:^8} {}'.format(client_ip, e['downstream_if'], mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], key ))
+            self.logger.info( '{:31} {:12} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
 
 
         else:
-            self.logger.info( '{:25} {:25} {:25} {:12} {:8} {:12}'.format('client_ip', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'downstream_if') )
-            self.logger.info( '{:25} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '-----------------', '-----------------', '------------', '--------', '------------') )
+            self.logger.info( '{:25} {:12} {:25} {:25} {:12} {:8} '.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority') )
+            self.logger.info( '{:25} {:12} {:25} {:25} {:12} {:8} '.format('-----------------', '------------', '-----------------', '-----------------', '------------', '--------') )
             for key in mcast_table.keys():
                 e = mcast_table[key]
-                self.logger.info( '{:25} {:25} {:25} {:^12} {:^8} {:^12}'.format(e['client_ip'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority'], e['downstream_if']) )
-            self.logger.info( '{:25} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '-----------------', '-----------------', '------------', '--------', '------------') )
+                self.logger.info( '{:25} {:^12} {:25} {:25} {:^12} {:^8} '.format(e['client_ip'], e['downstream_if'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
+            self.logger.info( '{:25} {:12} {:25} {:25} {:12} {:8} '.format('-----------------', '------------', '-----------------', '-----------------', '------------', '--------') )
 
     def get_mcast_table(self, format, extended):
 
@@ -344,8 +284,8 @@ class MURT:
                 mcast_table = {}
                 for key in self.mcast_upstream_routing.keys():
                     e = self.mcast_upstream_routing[key]
-                    mcast_table[key] = dict(client_ip=e['client_ip'], mcast_group=e['mcast_group'], mcast_src_ip=e['mcast_src_ip'],
-                                            upstream_if=e['upstream_if'], priority=e['priority'], downstream_if=e['downstream_if'])
+                    mcast_table[key] = dict(client_ip=e['client_ip'], downstream_if=e['downstream_if'], mcast_group=e['mcast_group'],
+                                            mcast_src_ip=e['mcast_src_ip'], upstream_if=e['upstream_if'], priority=e['priority'])
                 return json.dumps(mcast_table, indent=4)
 
 
@@ -371,11 +311,11 @@ class MURT:
     def murtentry_helper(self, murtentry) -> dict:
         return {
             "client_ip": murtentry["client_ip"],
+            "downstream_if": murtentry["downstream_if"],
             "mcast_group": murtentry["mcast_group"],
             "mcast_src_ip": murtentry["mcast_src_ip"],
             "upstream_if": murtentry["upstream_if"],
             "priority": murtentry["priority"],
-            "downstream_if": murtentry["downstream_if"],
         }
 
 
@@ -464,10 +404,10 @@ class MURT:
                 return -1
 
 
-        new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, \
+        new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                            mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                            mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                           upstream_if=entry["upstream_if"], priority=entry["priority"], downstream_if=downstream_if)
+                           upstream_if=entry["upstream_if"], priority=entry["priority"])
 
 
         proposed_id = self.dict_hash(new_entry)
@@ -481,10 +421,10 @@ class MURT:
             #entry_id.acknowledged PARA COMPROBACIONES
             entry_id = str(result.inserted_id)
 
-            self.mcast_upstream_routing[entry_id] = dict(_id=entry_id, client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, \
+            self.mcast_upstream_routing[entry_id] = dict(_id=entry_id, client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                                        mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                        mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                       upstream_if=entry["upstream_if"], priority=entry["priority"], downstream_if=downstream_if)
+                                       upstream_if=entry["upstream_if"], priority=entry["priority"])
             
             new_murtentry = self.retrieve_murt_entry(entry_id)
             return new_murtentry
@@ -570,10 +510,10 @@ class MURT:
             except:
                 priority = murtentry["priority"]
 
-            new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, \
+            new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=upstream_if, priority=priority, downstream_if=downstream_if)
+                                   upstream_if=upstream_if, priority=priority)
          
 
             formated_entry = self.murtentry_helper(new_entry)

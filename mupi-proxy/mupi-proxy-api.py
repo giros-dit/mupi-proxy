@@ -96,7 +96,7 @@ class MupiMcastProxy (app_manager.RyuApp):
             #print(f'{l}')
             f = l.split(',')
             #print( '{:17} {:17} {:17} {:12} {:8}'.format(f[0].strip(), f[1].strip(), f[2].strip(), f[3].strip(), f[4].strip()) )
-            e = [ f[0].strip(), f[1].strip(), f[2].strip(), int(f[3].strip()), int(f[4].strip()), f[5].strip()]
+            e = [ f[0].strip(), f[1].strip(), f[2].strip(),f[3].strip(), int(f[4].strip()), int(f[5].strip())]
             #print (e)
             id = self.murt.add_entry(e)
             if id:
@@ -458,6 +458,8 @@ class MupiProxyApi(ControllerBase):
     def update_murt_entry(self, req, entry_id, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         try:
+            print(req)
+            print(req.json)
             new_data = req.json if req.body else {}
         except ValueError:
             raise Response(status=400)

@@ -87,21 +87,21 @@ do
 			then
 			   echo "Add a new MURT Entry into to the database"
 			   read -p "client_ip: ------> " CLIENT_IP
+			   read -p "downstream_if: --> " DOWNSTREAM_IF
 			   read -p "mcast_group: ----> " MCAST_GROUP
 			   read -p "mcast_src_ip: ---> " MCAST_SRC_IP
 			   read -p "upstream_if: ----> " UPSTREAM_IF
 			   read -p "priority: -------> " PRIORITY
-			   read -p "downstream_if: --> " DOWNSTREAM_IF
 
-			   NEW_ENTRY='{"client_ip":"'$CLIENT_IP'", "mcast_group":"'$MCAST_GROUP'", "mcast_src_ip":"'$MCAST_SRC_IP'", "upstream_if":"'$UPSTREAM_IF'", "priority":"'$PRIORITY'", "downstream_if":"'$DOWNSTREAM_IF'"}'
+			   NEW_ENTRY='{"client_ip":"'$CLIENT_IP'", "downstream_if":"'$DOWNSTREAM_IF'","mcast_group":"'$MCAST_GROUP'", "mcast_src_ip":"'$MCAST_SRC_IP'", "upstream_if":"'$UPSTREAM_IF'", "priority":"'$PRIORITY'"}'
 
 			   echo "$NEW_ENTRY"
 			   read -p "Type YES to confirm your entry: " CONFIRMATION
 			   if [ $CONFIRMATION == "YES" ]
 			    then
 			    	echo "CONFIRMED"
-			    	#curl -X POST -d $NEW_ENTRY http://127.0.0.1:8080/mupi-proxy/murtentries
-			    	curl -X POST -d '{"client_ip":"'$CLIENT_IP'", "mcast_group":"'$MCAST_GROUP'", "mcast_src_ip":"'$MCAST_SRC_IP'", "upstream_if":'$UPSTREAM_IF', "priority":'$PRIORITY', "downstream_if":"'$DOWNSTREAM_IF'"}' http://127.0.0.1:8080/mupi-proxy/murtentries
+			    	curl -X POST -d "$NEW_ENTRY" http://127.0.0.1:8080/mupi-proxy/murtentries
+			    	#curl -X POST -d '{"client_ip":"'$CLIENT_IP'", "mcast_group":"'$MCAST_GROUP'", "mcast_src_ip":"'$MCAST_SRC_IP'", "upstream_if":'$UPSTREAM_IF', "priority":'$PRIORITY', "downstream_if":"'$DOWNSTREAM_IF'"}' http://127.0.0.1:8080/mupi-proxy/murtentries
 			    	echo ""
 			    	read -p ""
 			   		echo "$MURT_OPERATION"
@@ -137,7 +137,7 @@ do
 			   read -p "Confirm typing YES: --> " CONFIRMATION
 			   if [ $CONFIRMATION == "YES" ]
 			   	then
-			   		curl -X PUT -d $UPDATED_ENTRY http://127.0.0.1:8080/mupi-proxy/murtentries/$ID
+			   		curl -X PUT -d "$UPDATED_ENTRY" http://127.0.0.1:8080/mupi-proxy/murtentries/$ID
 			   fi
 			   read -p ""
 			   echo "$MURT_OPERATION"
