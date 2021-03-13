@@ -43,15 +43,25 @@ from ryu import cfg
 import json
 #import dataset
 #import sys
-
+import re
 import McastUpstreamRoutingTable
 
+from ryu.app.wsgi import ControllerBase
+from ryu.app.wsgi import Response
+from ryu.app.wsgi import route
+from ryu.app.wsgi import WSGIApplication
+
+
+mupi_proxy_instance_name = 'mupi_proxy_api_app'
+BASE_URL = '/mupi-proxy'
 
 class MupiMcastProxy (app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
+    _CONTEXTS = {'wsgi': WSGIApplication}
+
     def __init__(self, *args, **kwargs):
-        super(MupiMcastProxy, self).__init__(*args, **kwargs) 
+        super(MupiMcastProxy, self).__init__(*args, **kwargs)
 
         self.logger.info('--------------------------------------') 
         self.logger.info('-- MupiMcastProxy.__init__ called') 
@@ -59,6 +69,8 @@ class MupiMcastProxy (app_manager.RyuApp):
         self.mac_to_port = {}
         self._to_hosts = {}
         self.murt = McastUpstreamRoutingTable.MURT(self.logger)
+        wsgi = kwargs['wsgi']
+        wsgi.register(MupiProxyApi,{mupi_proxy_instance_name: self})
 
         # Read config params from DEFAULT section
         cfg.CONF.register_opts([
@@ -84,7 +96,7 @@ class MupiMcastProxy (app_manager.RyuApp):
             #print(f'{l}')
             f = l.split(',')
             #print( '{:17} {:17} {:17} {:12} {:8}'.format(f[0].strip(), f[1].strip(), f[2].strip(), f[3].strip(), f[4].strip()) )
-            e = [ f[0].strip(), f[1].strip(), f[2].strip(), int(f[3].strip()), int(f[4].strip()), f[5].strip()]
+            e = [ f[0].strip(), f[1].strip(), f[2].strip(),f[3].strip(), int(f[4].strip()), int(f[5].strip())]
             #print (e)
             id = self.murt.add_entry(e)
             if id:
@@ -321,6 +333,7 @@ class MupiMcastProxy (app_manager.RyuApp):
                 mcast_src_ip = record.srcs[0]
             #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
             upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if
+            #prueba = self.murt.get_upstream_if_database(client_ip, mcast_group, mcast_src_ip, in_port)
             if upstream_ifs:
                 for provider in upstream_ifs:
                     if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
@@ -362,3 +375,108 @@ class MupiMcastProxy (app_manager.RyuApp):
                 data = msg.data
             out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port, actions=actions, data=data)
             datapath.send_msg(out)
+
+
+
+
+
+###############################################
+#             NORTHBOUND INTERFACE            #
+#                   API REST                  #
+###############################################
+class MupiProxyApi(ControllerBase):
+    def __init__(self, req, link, data, **config):
+        super(MupiProxyApi, self).__init__(req, link, data, **config)
+        self.mupi_proxy_api_rest = data[mupi_proxy_instance_name]
+
+
+    ###############################################
+    #MURT ENTRY
+    ###############################################
+    @route('mupiproxy', BASE_URL + '/murtentries', methods=['GET'])
+    def get_murt_entries(self, req, **kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        murtentries = mupi_proxy.murt.retrieve_murt_entries()
+        if murtentries:
+            body = json.dumps(murtentries, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            return Response(status=404)
+
+    @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['GET'])
+    def get_murt_entry(self, req, entry_id, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        murt_entry = mupi_proxy.murt.retrieve_murt_entry(entry_id)
+        if murt_entry:
+            body = json.dumps(murt_entry, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            response = "No murt entry with id: " + str(entry_id)
+            body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=404, body=body)
+
+    @route('mupiproxy', BASE_URL + '/murtentries', methods=['POST'])
+    def post_murt_entry(self, req, **kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        try:
+            new_entry = req.json if req.body else {}
+        except ValueError:
+            raise Response(status=400)
+        try:
+            entry_added = mupi_proxy.murt.add_murt_entry(new_entry)
+            if entry_added:
+                if len(entry_added) == 1:
+                    response = "Duplicated entry"
+                    body = json.dumps(response, indent=4)
+                    return Response(content_type='application/json', status=404, body=body)
+                else:
+                    body = json.dumps(entry_added, indent=4)
+                    return Response(content_type='application/json', status=200, body=body)
+        except Exception as e:
+            return Response(status=500)
+
+    @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['DELETE'])
+    def delete_murt_entry(self, req, entry_id, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        if mupi_proxy.murt.delete_murt_entry(entry_id):
+            response = {"Deleted":"Success"}
+            body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            return Response(status=404)
+
+    @route('mupiproxy', BASE_URL + '/murtentries', methods=['DELETE'])
+    def delete_murt_entries(self, req, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        if mupi_proxy.murt.delete_murt_entries():
+            response = {"Deleted All":"Success"}
+            body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            return Response(status=404)
+
+    @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['PUT'])
+    def update_murt_entry(self, req, entry_id, **_kwargs):
+        mupi_proxy = self.mupi_proxy_api_rest
+        try:
+            print(req)
+            print(req.json)
+            new_data = req.json if req.body else {}
+        except ValueError:
+            raise Response(status=400)
+        updated_murt_entry = mupi_proxy.murt.update_murt_entry(entry_id, new_data)
+        if updated_murt_entry:
+            body = json.dumps(updated_murt_entry, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        else:
+            return Response(status=404)
+
+
+    ###############################################
+    #PROVIDER
+    ###############################################
+
+
+    ###############################################
+    #SDN CONTROLLER
+    ###############################################
