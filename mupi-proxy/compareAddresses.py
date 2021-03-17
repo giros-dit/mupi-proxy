@@ -16,7 +16,7 @@ def manage_ip_addresses(ip_requested: str):
 
 
 
-
+#ANOTACIONES 
 
 
 
