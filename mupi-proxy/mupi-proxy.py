@@ -65,12 +65,22 @@ class MupiMcastProxy (app_manager.RyuApp):
 
         self.logger.info('--------------------------------------') 
         self.logger.info('-- MupiMcastProxy.__init__ called') 
+
+        # logger configure
+        # MupiProxyApi.set_logger(self.logger)
+
         # Variable initialization
         self.mac_to_port = {}
         self._to_hosts = {}
+        self.data = {}
         self.murt = McastUpstreamRoutingTable.MURT(self.logger)
+        self.data['mac_to_port'] = self.mac_to_port
+        self.data['_to_hosts'] = self._to_hosts
+        self.data['murt'] = self.murt
         wsgi = kwargs['wsgi']
-        wsgi.register(MupiProxyApi,{mupi_proxy_instance_name: self})
+        wsgi.registory['MupiProxyApi'] = self.data
+        wsgi.register(MupiProxyApi, self.data)
+        #wsgi.register(MupiProxyApi,{mupi_proxy_instance_name: self})
 
         # Read config params from DEFAULT section
         cfg.CONF.register_opts([
@@ -334,7 +344,7 @@ class MupiMcastProxy (app_manager.RyuApp):
                 mcast_src_ip = record.srcs[0]
             #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
             upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if
-            #prueba = self.murt.get_upstream_if_database(client_ip, mcast_group, mcast_src_ip, in_port)
+            prueba = self.murt.get_upstream_if_database(client_ip, mcast_group, mcast_src_ip, in_port)
             if upstream_ifs:
                 for provider in upstream_ifs:
                     if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
@@ -386,9 +396,12 @@ class MupiMcastProxy (app_manager.RyuApp):
 #                   API REST                  #
 ###############################################
 class MupiProxyApi(ControllerBase):
+    # _LOGGER = None
     def __init__(self, req, link, data, **config):
         super(MupiProxyApi, self).__init__(req, link, data, **config)
-        self.mupi_proxy_api_rest = data[mupi_proxy_instance_name]
+        self.mac_to_port = data['mac_to_port']
+        self._to_hosts = data['_to_hosts']
+        self.murt = data['murt']
 
 
 ###############################################
@@ -396,20 +409,18 @@ class MupiProxyApi(ControllerBase):
 ###############################################
     @route('mupiproxy', BASE_URL + '/murtentries-table', methods=['GET'])
     def get_murt_table(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         format = "json"
         extended = True
-        body = mupi_proxy.murt.get_mcast_table(format, extended)
-        table = mupi_proxy.murt.print_mcast_table(mupi_proxy.murt.mcast_upstream_routing, False)
+        body = self.murt.get_mcast_table(format, extended)
+        table = self.murt.print_mcast_table(self.murt.mcast_upstream_routing, False)
         return Response(content_type='application/json', status=200, body=body)
 
 
     # List murt entries: lists the current entries in MURT
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['GET'])
     def get_murt_entries(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            murtentries = mupi_proxy.murt.retrieve_murt_entries()
+            murtentries = self.murt.retrieve_murt_entries()
             return Response(content_type='application/json', status=200, body=murtentries)
         except ValueError:
             response = "[ERROR]"
@@ -419,9 +430,8 @@ class MupiProxyApi(ControllerBase):
     # Show murt entry: shows a MURT entry in detail
     @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['GET'])
     def get_murt_entry(self, req, entry_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            murt_entry = mupi_proxy.murt.retrieve_murt_entry(entry_id)
+            murt_entry = self.murt.retrieve_murt_entry(entry_id)
             return Response(content_type='application/json', status=200, body=murt_entry)
         except:
             response = "[ERROR] Wrong id: " + str(entry_id)
@@ -431,7 +441,6 @@ class MupiProxyApi(ControllerBase):
     # Add murt entry: adds a new entry in MURT
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['POST'])
     def post_murt_entry(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_entry = req.json if req.body else {}
         except ValueError:
@@ -444,7 +453,7 @@ class MupiProxyApi(ControllerBase):
             return Response(content_type='application/json', status=400, body=body)
         else:
             try:
-                entry_added = mupi_proxy.murt.add_murt_entry(new_entry)
+                entry_added = self.murt.add_murt_entry(new_entry)
                 if entry_added:
                     return Response(content_type='application/json', status=200, body=entry_added)
                 else:
@@ -457,7 +466,6 @@ class MupiProxyApi(ControllerBase):
     # Update murt entry: updates a MURT entry, reconfiguring the switch flow tables according to the modification
     @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['PUT'])
     def update_murt_entry(self, req, entry_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_data = req.json if req.body else {}
         except ValueError:
@@ -465,7 +473,7 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
         try:
-            updated_murt_entry = mupi_proxy.murt.update_murt_entry(entry_id, new_data)
+            updated_murt_entry = self.murt.update_murt_entry(entry_id, new_data)
             return Response(content_type='application/json', status=200, body=updated_murt_entry)
         except:
             response = "[ERROR]"
@@ -475,9 +483,8 @@ class MupiProxyApi(ControllerBase):
     # Delete murt entry: deletes an entry from MURT
     @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['DELETE'])
     def delete_murt_entry(self, req, entry_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            result = mupi_proxy.murt.delete_murt_entry(entry_id)
+            result = self.murt.delete_murt_entry(entry_id)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -487,9 +494,8 @@ class MupiProxyApi(ControllerBase):
     # Clear murt entries: deletes all entries from MURT
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['DELETE'])
     def delete_murt_entries(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            result = mupi_proxy.murt.delete_murt_entries()
+            result = self.murt.delete_murt_entries()
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -503,20 +509,18 @@ class MupiProxyApi(ControllerBase):
     #
     @route('mupiproxy', BASE_URL + '/providers-table', methods=['GET'])
     def get_providers_table(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         format = "json"
         extended = True
-        body = mupi_proxy.murt.get_provider_table(format, extended)
-        table = mupi_proxy.murt.print_provider_table(mupi_proxy.murt.providers)
+        body = self.murt.get_provider_table(format, extended)
+        table = self.murt.print_provider_table(self.murt.providers)
         return Response(content_type='application/json', status=200, body=body)
 
 
     # List content providers: lists the content providers added to the multicast proxy
     @route('mupiproxy', BASE_URL + '/providers', methods=['GET'])
     def get_providers(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            providers = mupi_proxy.murt.retrieve_providers()
+            providers = self.murt.retrieve_providers()
             return Response(content_type='application/json', status=200, body=providers)
         except ValueError:
             response = "[ERROR]"
@@ -526,9 +530,8 @@ class MupiProxyApi(ControllerBase):
     # Show content provider: shows detailed information about a content provider such as IP address, upstream interface, among others
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['GET'])
     def get_provider(self, req, provider_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            provider = mupi_proxy.murt.retrieve_provider(provider_id)
+            provider = self.murt.retrieve_provider(provider_id)
             return Response(content_type='application/json', status=200, body=provider)
         except:
             response = "[ERROR] Wrong id: " + str(provider_id)
@@ -538,7 +541,6 @@ class MupiProxyApi(ControllerBase):
     # Add content provider: adds an IP multicast content provider
     @route('mupiproxy', BASE_URL + '/providers', methods=['POST'])
     def post_provider(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_provider = req.json if req.body else {}
         except ValueError:
@@ -551,7 +553,7 @@ class MupiProxyApi(ControllerBase):
             return Response(content_type='application/json', status=400, body=body)
         else:
             try:
-                provider_added = mupi_proxy.murt.add_provider(new_provider)
+                provider_added = self.murt.add_provider(new_provider)
                 if provider_added:
                     return Response(content_type='application/json', status=200, body=provider_added)
                 else:
@@ -564,7 +566,6 @@ class MupiProxyApi(ControllerBase):
     # Update content provider: updates functional parameters of a content provider
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['PUT'])
     def update_provider(self, req, provider_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_data = req.json if req.body else {}
         except ValueError:
@@ -572,7 +573,7 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
         try:
-            updated_provider = mupi_proxy.murt.update_provider(provider_id, new_data)
+            updated_provider = self.murt.update_provider(provider_id, new_data)
             return Response(content_type='application/json', status=200, body=updated_provider)
         except:
             response = "[ERROR]"
@@ -582,9 +583,8 @@ class MupiProxyApi(ControllerBase):
     # Delete content provider: deletes a content provider from the multicast proxy
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['DELETE'])
     def delete_provider(self, req, provider_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            result = mupi_proxy.murt.delete_provider(provider_id)
+            result = self.murt.delete_provider(provider_id)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -594,9 +594,8 @@ class MupiProxyApi(ControllerBase):
     # Clear content providers: deletes all the content providers from the multicast proxy
     @route('mupiproxy', BASE_URL + '/providers', methods=['DELETE'])
     def delete_providers(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            result = mupi_proxy.murt.delete_providers()
+            result = self.murt.delete_providers()
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -610,20 +609,18 @@ class MupiProxyApi(ControllerBase):
 ###############################################
     @route('mupiproxy', BASE_URL + '/controllers-table', methods=['GET'])
     def get_controllers_table(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         format = "json"
         extended = True
-        body = mupi_proxy.murt.get_controller_table(format, extended)
-        table = mupi_proxy.murt.print_controller_table(mupi_proxy.murt.controllers)
+        body = self.murt.get_controller_table(format, extended)
+        table = self.murt.print_controller_table(self.murt.controllers)
         return Response(content_type='application/json', status=200, body=body)
 
 
     # List SDN Controllers: lists the SDN Controllers added to the multicast proxy
     @route('mupiproxy', BASE_URL + '/controllers', methods=['GET'])
     def get_controllers(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            controllers = mupi_proxy.murt.retrieve_controllers()
+            controllers = self.murt.retrieve_controllers()
             return Response(content_type='application/json', status=200, body=controllers)
         except ValueError:
             response = "[ERROR]"
@@ -633,9 +630,8 @@ class MupiProxyApi(ControllerBase):
     # Show main SDN controller: shows detailed information about the main SDN controller such as openflow version, TCP port, IP address, among others.
     @route('mupiproxy', BASE_URL + '/controllers/{controller_id}', methods=['GET'])
     def get_controller(self, req, controller_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            controller = mupi_proxy.murt.retrieve_controller(controller_id)
+            controller = self.murt.retrieve_controller(controller_id)
             return Response(content_type='application/json', status=200, body=controller)
         except:
             response = "[ERROR] Wrong id: " + str(controller_id)
@@ -645,7 +641,6 @@ class MupiProxyApi(ControllerBase):
     # Add main SDN controller: adds a main SDN controller. The local SDN controller of the multicast proxy is configured as secondary controller. In this light, a hierarchical multicast proxy structure is created
     @route('mupiproxy', BASE_URL + '/controllers', methods=['POST'])
     def post_controller(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_controller = req.json if req.body else {}
         except ValueError:
@@ -658,7 +653,7 @@ class MupiProxyApi(ControllerBase):
             return Response(content_type='application/json', status=400, body=body)
         else:
             try:
-                controller_added = mupi_proxy.murt.add_controller(new_controller)
+                controller_added = self.murt.add_controller(new_controller)
                 if controller_added:
                     return Response(content_type='application/json', status=200, body=controller_added)
                 else:
@@ -671,7 +666,6 @@ class MupiProxyApi(ControllerBase):
     # Update main SDN controller: updates functional parameters of the controller.
     @route('mupiproxy', BASE_URL + '/controllers/{controller_id}', methods=['PUT'])
     def update_controller(self, req, controller_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_data = req.json if req.body else {}
         except ValueError:
@@ -679,7 +673,7 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
         try:
-            updated_controller = mupi_proxy.murt.update_controller(controller_id, new_data)
+            updated_controller = self.murt.update_controller(controller_id, new_data)
             return Response(content_type='application/json', status=200, body=updated_controller)
         except:
             response = "[ERROR]"
@@ -689,9 +683,8 @@ class MupiProxyApi(ControllerBase):
     # Delete main SDN controller: deletes the main SDN controller. In this light, the hierarchical structure is also deleted
     @route('mupiproxy', BASE_URL + '/controllers/{controller_id}', methods=['DELETE'])
     def delete_controller(self, req, controller_id, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            result = mupi_proxy.murt.delete_controller(controller_id)
+            result = self.murt.delete_controller(controller_id)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -701,9 +694,8 @@ class MupiProxyApi(ControllerBase):
     # Clear SDN Controllers deletes all the SDN Controllers from the multicast proxy
     @route('mupiproxy', BASE_URL + '/controllers', methods=['DELETE'])
     def delete_controllers(self, req, **_kwargs):
-        mupi_proxy = self.mupi_proxy_api_rest
         try:
-            result = mupi_proxy.murt.delete_controllers()
+            result = self.murt.delete_controllers()
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
