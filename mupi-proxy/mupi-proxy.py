@@ -395,7 +395,7 @@ class MupiProxyApi(ControllerBase):
 #MURT ENTRY
 ###############################################
     @route('mupiproxy', BASE_URL + '/murtentries-table', methods=['GET'])
-    def get_murt_table(self, req, **kwargs):
+    def get_murt_table(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         format = "json"
         extended = True
@@ -406,7 +406,7 @@ class MupiProxyApi(ControllerBase):
 
     # List murt entries: lists the current entries in MURT
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['GET'])
-    def get_murt_entries(self, req, **kwargs):
+    def get_murt_entries(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         try:
             murtentries = mupi_proxy.murt.retrieve_murt_entries()
@@ -430,7 +430,7 @@ class MupiProxyApi(ControllerBase):
 
     # Add murt entry: adds a new entry in MURT
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['POST'])
-    def post_murt_entry(self, req, **kwargs):
+    def post_murt_entry(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_entry = req.json if req.body else {}
@@ -502,7 +502,7 @@ class MupiProxyApi(ControllerBase):
 ###############################################
     #
     @route('mupiproxy', BASE_URL + '/providers-table', methods=['GET'])
-    def get_providers_table(self, req, **kwargs):
+    def get_providers_table(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         format = "json"
         extended = True
@@ -513,7 +513,7 @@ class MupiProxyApi(ControllerBase):
 
     # List content providers: lists the content providers added to the multicast proxy
     @route('mupiproxy', BASE_URL + '/providers', methods=['GET'])
-    def get_providers(self, req, **kwargs):
+    def get_providers(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         try:
             providers = mupi_proxy.murt.retrieve_providers()
@@ -537,7 +537,7 @@ class MupiProxyApi(ControllerBase):
 
     # Add content provider: adds an IP multicast content provider
     @route('mupiproxy', BASE_URL + '/providers', methods=['POST'])
-    def post_provider(self, req, **kwargs):
+    def post_provider(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_provider = req.json if req.body else {}
@@ -609,7 +609,7 @@ class MupiProxyApi(ControllerBase):
 #SDN CONTROLLER
 ###############################################
     @route('mupiproxy', BASE_URL + '/controllers-table', methods=['GET'])
-    def get_controllers_table(self, req, **kwargs):
+    def get_controllers_table(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         format = "json"
         extended = True
@@ -620,7 +620,7 @@ class MupiProxyApi(ControllerBase):
 
     # List SDN Controllers: lists the SDN Controllers added to the multicast proxy
     @route('mupiproxy', BASE_URL + '/controllers', methods=['GET'])
-    def get_controllers(self, req, **kwargs):
+    def get_controllers(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         try:
             controllers = mupi_proxy.murt.retrieve_controllers()
@@ -644,7 +644,7 @@ class MupiProxyApi(ControllerBase):
 
     # Add main SDN controller: adds a main SDN controller. The local SDN controller of the multicast proxy is configured as secondary controller. In this light, a hierarchical multicast proxy structure is created
     @route('mupiproxy', BASE_URL + '/controllers', methods=['POST'])
-    def post_controller(self, req, **kwargs):
+    def post_controller(self, req, **_kwargs):
         mupi_proxy = self.mupi_proxy_api_rest
         try:
             new_controller = req.json if req.body else {}

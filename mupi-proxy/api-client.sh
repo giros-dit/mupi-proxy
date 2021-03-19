@@ -127,7 +127,7 @@ do
 			   read -p "upstream_if: ----> " UPSTREAM_IF
 			   read -p "priority: -------> " PRIORITY
 
-			   NEW_ENTRY='{"client_ip":"'$CLIENT_IP'", "downstream_if":"'$DOWNSTREAM_IF'","mcast_group":"'$MCAST_GROUP'", "mcast_src_ip":"'$MCAST_SRC_IP'", "upstream_if":"'$UPSTREAM_IF'", "priority":"'$PRIORITY'"}'
+			   NEW_ENTRY='{"client_ip":"'$CLIENT_IP'", "downstream_if":"'$DOWNSTREAM_IF'","mcast_group":"'$MCAST_GROUP'", "mcast_src_ip":"'$MCAST_SRC_IP'", "upstream_if":'$UPSTREAM_IF', "priority":'$PRIORITY'}'
 
 			   echo "$NEW_ENTRY"
 			   read -p "Type YES to confirm your entry: " CONFIRMATION
