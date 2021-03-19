@@ -199,7 +199,6 @@ class MURT:
 #MURT ENTRY
 ###############################################
     # List murt entries: lists the current entries in MURT
-    @rest_command
     def retrieve_murt_entries(self):
         murtentries = []
         for key in self.mcast_upstream_routing:
@@ -216,7 +215,6 @@ class MURT:
         return body
 
     # Show murt entry: shows a MURT entry in detail
-    @rest_command
     def retrieve_murt_entry(self, id) -> dict:
         if id in self.mcast_upstream_routing:
             murtentry = self.mcast_upstream_routing[id]
@@ -227,7 +225,6 @@ class MURT:
         return body
 
     # Add murt entry: adds a new entry in MURT
-    @rest_command
     def add_murt_entry(self, entry) -> dict:
 
         # client_ip
@@ -296,7 +293,6 @@ class MURT:
             return new_murtentry
 
     #Upload murt entries from a configuration file
-    @rest_command
     def add_entry(self, entry):
 
         # client_ip
@@ -365,7 +361,6 @@ class MURT:
 
 
     # Update murt entry: updates a MURT entry, reconfiguring the switch flow tables according to the modification
-    @rest_command
     def update_murt_entry(self, id, entry):
         # Return false if an empty request body is sent.
         if len(entry) < 1:
@@ -451,7 +446,6 @@ class MURT:
             return updated_murtentry
 
     # Delete murt entry: deletes an entry from MURT
-    @rest_command
     def delete_murt_entry(self, id):
         if id in self.mcast_upstream_routing:
             murtentry = self.mcast_upstream_routing[id]
@@ -465,7 +459,6 @@ class MURT:
         return body
 
     # Clear murt entries: deletes all entries from MURT
-    @rest_command
     def delete_murt_entries(self):
         self.mcast_upstream_routing = {}
         result = self.db.murtentries.delete_many({})
@@ -526,7 +519,6 @@ class MURT:
 #PROVIDER
 ###############################################
     # List content providers: lists the content providers added to the multicast proxy
-    @rest_command
     def retrieve_providers(self):
         providers_table = []
         for key in self.providers:
@@ -543,7 +535,6 @@ class MURT:
         return body
 
     # Show content provider: shows detailed information about a content provider such as IP address, upstream interface, among others
-    @rest_command
     def retrieve_provider(self, id) -> dict:
         if id in self.providers:
             provider = self.providers[id]
@@ -554,7 +545,6 @@ class MURT:
         return body
 
     # Add content provider: adds an IP multicast content provider
-    @rest_command 
     def add_provider(self, provider) -> dict:
 
         # description
@@ -620,7 +610,6 @@ class MURT:
 
 
     # Update content provider: updates functional parameters of a content provider
-    @rest_command
     def update_provider(self, id, new_data):
         # Return false if an empty request body is sent.
         if len(new_data) < 1:
@@ -679,7 +668,6 @@ class MURT:
             return updated_provider
 
     # Delete content provider: deletes a content provider from the multicast proxy
-    @rest_command
     def delete_provider(self, id):
         if id in self.providers:
             provider = self.providers[id]
@@ -693,7 +681,6 @@ class MURT:
         return body
 
     # Clear content providers: deletes all the content providers from the multicast proxy
-    @rest_command
     def delete_providers(self):
         self.providers = {}
         result = self.db.providers.delete_many({})
@@ -729,7 +716,6 @@ class MURT:
 ###############################################
 
     # List SDN Controllers: lists the SDN Controllers added to the multicast proxy
-    @rest_command
     def retrieve_controllers(self):
         controllers_table = []
         for key in self.controllers:
@@ -746,7 +732,6 @@ class MURT:
         return body
 
     # Show main SDN controller: shows detailed information about the main SDN controller such as openflow version, TCP port, IP address, among others
-    @rest_command
     def retrieve_controller(self, id) -> dict:
         if id in self.controllers:
             controller = self.controllers[id]
@@ -757,7 +742,6 @@ class MURT:
         return body
 
     # Add main SDN controller: adds a main SDN controller. The local SDN controller of the multicast proxy is configured as secondary controller. In this light, a hierarchical multicast proxy structure is created 
-    @rest_command
     def add_controller(self, controller) -> dict:
 
         # description
@@ -818,7 +802,6 @@ class MURT:
 
 
     # Update main SDN controller: updates functional parameters of the controller
-    @rest_command
     def update_controller(self, id, new_data):
         # Return false if an empty request body is sent.
         if len(new_data) < 1:
@@ -872,7 +855,6 @@ class MURT:
             return updated_controller
 
     # Delete main SDN controller: deletes the main SDN controller. In this light, the hierarchical structure is also deleted
-    @rest_command
     def delete_controller(self, id):
         if id in self.controllers:
             controller = self.controllers[id]
@@ -886,7 +868,6 @@ class MURT:
         return body
 
     # Clear SDN Controllers deletes all the SDN Controllers from the multicast proxy
-    @rest_command
     def delete_controllers(self):
         self.controllers = {}
         result = self.db.controllers.delete_many({})
