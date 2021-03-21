@@ -52,7 +52,6 @@ from ryu.app.wsgi import route
 from ryu.app.wsgi import WSGIApplication
 
 
-mupi_proxy_instance_name = 'mupi_proxy_api_app'
 BASE_URL = '/mupi-proxy'
 
 class MupiMcastProxy (app_manager.RyuApp):
@@ -80,7 +79,6 @@ class MupiMcastProxy (app_manager.RyuApp):
         wsgi = kwargs['wsgi']
         wsgi.registory['MupiProxyApi'] = self.data
         wsgi.register(MupiProxyApi, self.data)
-        #wsgi.register(MupiProxyApi,{mupi_proxy_instance_name: self})
 
         # Read config params from DEFAULT section
         cfg.CONF.register_opts([
@@ -141,11 +139,9 @@ class MupiMcastProxy (app_manager.RyuApp):
                                              actions)]
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id, command=ofproto.OFPFC_ADD,     
-                                    priority=priority, match=match,  
-                                    instructions=inst)
+                                    priority=priority, match=match, instructions=inst)
         else:
-            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
-                                    match=match, instructions=inst)
+            mod = parser.OFPFlowMod(datapath=datapath, priority=priority, match=match, instructions=inst)
         datapath.send_msg(mod)
 
     def del_flow(self, datapath, priority, out_port, match, actions, buffer_id=None):
@@ -410,8 +406,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/murtentries-table', methods=['GET'])
     def get_murt_table(self, req, **_kwargs):
         format = "json"
-        extended = True
-        body = self.murt.get_mcast_table(format, extended)
+        body = self.murt.get_mcast_table(format, True)
         table = self.murt.print_mcast_table(self.murt.mcast_upstream_routing, False)
         return Response(content_type='application/json', status=200, body=body)
 
@@ -506,6 +501,24 @@ class MupiProxyApi(ControllerBase):
 ###############################################
 #PROVIDER
 ###############################################
+
+    # Get Providers for an specific channel
+    @route('mupiproxy', BASE_URL + '/channel/{channel_id}', methods=['GET'])
+    def who_has_a_channel(self, req, channel_id, **_kwargs):
+        try:
+            providers = self.murt.who_has_a_channel(channel_id)
+            if len(providers) != 0:
+                table = self.murt.print_provider_table(providers)
+                body = json.dumps(providers, indent=4)
+            else:
+                response = "There aren't providers who broadcast the requested channel: " + str(channel_id)
+                body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=200, body=body)
+        except:
+            response = "[ERROR] Wrong id: " + str(channel_id)
+            body = json.dumps(response, indent=4)
+            raise Response(content_type='application/json', status=500, body=body)
+
     #
     @route('mupiproxy', BASE_URL + '/providers-table', methods=['GET'])
     def get_providers_table(self, req, **_kwargs):

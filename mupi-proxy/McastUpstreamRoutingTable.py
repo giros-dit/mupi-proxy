@@ -75,6 +75,12 @@ class MURT:
             object_id = provider["_id"]
             id = str(object_id)
             self.providers[id] = provider
+        #controllers
+        controllers_array = list(self.db.controllers.find())
+        for controller in controllers_array:
+            object_id = controller["_id"]
+            id = str(object_id)
+            self.controllers[id] = controller
 
     #HELPER FUNCTIONS
     #For parsing the results from a database query into a Python dict
@@ -126,14 +132,14 @@ class MURT:
                 if (      ( e['client_ip_first'] == ''    or ( client_ip_num    >= e['client_ip_first']    and client_ip_num    <= e['client_ip_last'] ) ) 
                       and ( e['mcast_group_first'] == ''  or ( mcast_group_num  >= e['mcast_group_first']  and mcast_group_num  <= e['mcast_group_last']  ))
                       and ( e['mcast_src_ip_first'] == '' or ( mcast_src_ip_num >= e['mcast_src_ip_first'] and mcast_src_ip_num <= e['mcast_src_ip_last'] ))
-                      and ( e['downstream_if'] == '' or ( downstream_if == e['downstream_if']) )):
+                      and ( e['downstream_if'] == '' or ( str(downstream_if) == e['downstream_if']) )):
                     match_entries[key] = e
                     if e['priority'] > max_priority:
                         max_priority = e['priority']
             else:
                 if (      ( e['client_ip_first'] == ''    or ( client_ip_num    >= e['client_ip_first']    and client_ip_num    <= e['client_ip_last'] ) ) 
                         and ( e['mcast_group_first'] == ''  or ( mcast_group_num  >= e['mcast_group_first']  and mcast_group_num  <= e['mcast_group_last']  )) 
-                        and ( e['downstream_if'] == '' or ( downstream_if == e['downstream_if']) )):
+                        and ( e['downstream_if'] == '' or ( str(downstream_if) == e['downstream_if']) )):
                     match_entries[key] = e
                     if e['priority'] > max_priority:
                         max_priority = e['priority']
@@ -163,6 +169,7 @@ class MURT:
         upstream_ifs = []
         client_ip_num = str(IPAddress(client_ip))
         mcast_group_num = str(IPAddress(mcast_group))
+        downstream_if = str(downstream_if)
         if ( mcast_src_ip != '' and mcast_src_ip != None):
             mcast_src_ip_num = str(IPAddress(mcast_src_ip))
             database_match = list(self.db.murtentries.aggregate([{"$match":{"$or":[{"client_ip_first":{ "$eq":''}},{"$and":[{"client_ip_first":{ "$lte": client_ip_num}},{"client_ip_last":{ "$gte": client_ip_num}}]}]}},{"$match":{"$or":[{"mcast_group_first":{ "$eq":''}},{"$and":[{"mcast_group_first":{ "$lte": mcast_group_num}},{"mcast_group_last":{ "$gte": mcast_group_num}}]}]}},{"$match":{"$or":[{"mcast_src_ip_first":{ "$eq":''}},{"$and":[{"mcast_src_ip_first":{ "$lte": mcast_src_ip_num}},{"mcast_src_ip_last":{ "$gte": mcast_src_ip_num}}]}]}},{"$match":{"$or":[{"downstream_if":{ "$eq":''}},{"downstream_if":{"$eq": downstream_if}}]}},{"$group":{"_id":"$priority", "matched_entries":{"$push":"$$ROOT"}, "count":{"$sum":1}}},{"$sort": SON([("priority", -1)])},{"$limit":1}]))
@@ -518,6 +525,14 @@ class MURT:
 ###############################################
 #PROVIDER
 ###############################################
+    def who_has_a_channel(self, id):
+        result = {}
+        providers = list(self.db.providers.aggregate([{"$unwind":"$mcast_groups"},{"$match":{"mcast_groups":id}}]))
+        if len(providers) != 0:
+            for provider in providers:
+                result[provider["_id"]] = provider
+        return result
+
     # List content providers: lists the content providers added to the multicast proxy
     def retrieve_providers(self):
         providers_table = []

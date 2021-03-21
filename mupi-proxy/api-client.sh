@@ -45,6 +45,7 @@ Select:
 	- [5] Delete a Provider from the database
 	- [6] Delete all Providers from the database
 	- [7] Show Providers Table
+	- [8] Give providers for a specific channel
 	- [B] Back
 
 "
@@ -231,7 +232,7 @@ do
 	   while [ True ]
 	   do
 
-		   read -p "Select your operation: 1, 2, 3, 4, 5, 6 or 7 ---> " PROVIDER_OPERATION_SELECTED
+		   read -p "Select your operation: 1, 2, 3, 4, 5, 6, 7 or 8 ---> " PROVIDER_OPERATION_SELECTED
 		   echo "" 
 		   OPERATION="$PROVIDER_OPERATION_SELECTED"
 
@@ -280,7 +281,6 @@ do
 			   echo ""
 			   read -p ""
 			   echo "$PROVIDER_OPERATION"
-
 
 			elif [ "$OPERATION" = 4  ]
 			then
@@ -334,6 +334,17 @@ do
 			   echo ""
 			   read -p ""
 			   echo "$PROVIDER_OPERATION"
+
+			elif [ "$OPERATION" = '8'  ]
+			then
+			   echo "Who broadcast this channel?"
+			   read -p "Write the channel ID requested --> " CHANNEL_ID
+			   ID="$CHANNEL_ID"
+			   curl -X  GET http://127.0.0.1:8080/mupi-proxy/channel/$ID
+			   echo ""
+			   read -p ""
+			   echo "$PROVIDER_OPERATION"
+
 			elif [ "$OPERATION" = "B"  ]
 			then
 			   echo "Back"

@@ -4,9 +4,9 @@ cd `dirname $0`
 CDIR=$(pwd)
 
 if [ "$1" == 'start' ]; then 
-    echo "-- Starting test:   mcjoin -i eth1 -s $2 $3 $4 $5 -p $6"
+    echo "-- Starting test:   mcjoin -i eth1 -s $2 $3 $4 $5 $6 $7 $8 $9 -p 1234"
     #nohup mcsender -t3 -ieth1 224.100.10.10:1234 &
-    nohup mcjoin -i eth1 -t 3 -s $2 $3 $4 $5 -p $6
+    nohup mcjoin -o -s -i eth1 -p 1234 $2 $3 $4 $5 $6 $7 $8 $9 &
     sleep 2
 elif [ "$1" == 'stop' ]; then 
     killall mcjoin

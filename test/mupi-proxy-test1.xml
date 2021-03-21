@@ -326,11 +326,8 @@ Authors:     David Fernández (david.fernandez at upm.es)
        /root/bin/mcsender_test start ff02::103 1234
        /root/bin/mcsender_test start ff02::104 1234
     </exec>
-    <exec seq="start-test1-mcjoin-ipv4" type="verbatim">
-       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 1234
-    </exec>
-    <exec seq="start-test1-mcjoin-ipv6" type="verbatim">
-       /root/bin/mcjoin_test start ff02::101 ff02::102 ff02::103 ff02::104 1234
+    <exec seq="start-test1-mcjoin" type="verbatim">
+       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
     </exec>
 
     <exec seq="stop-test-mcsender" type="verbatim">
@@ -377,11 +374,8 @@ Authors:     David Fernández (david.fernandez at upm.es)
        /root/bin/mcsender_test start ff02::103 1234
        /root/bin/mcsender_test start ff02::104 1234
     </exec>
-    <exec seq="start-test1-mcjoin-ipv4" type="verbatim">
-       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 1234
-    </exec>
-    <exec seq="start-test1-mcjoin-ipv6" type="verbatim">
-       /root/bin/mcjoin_test start ff02::101 ff02::102 ff02::103 ff02::104 1234
+    <exec seq="start-test1-mcjoin" type="verbatim">
+       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
     </exec>
      <exec seq="stop-test-mcsender" type="verbatim">
        killall mcsender
@@ -427,11 +421,8 @@ Authors:     David Fernández (david.fernandez at upm.es)
        /root/bin/mcsender_test start ff02::103 1234
        /root/bin/mcsender_test start ff02::104 1234
     </exec>
-    <exec seq="start-test1-mcjoin-ipv4" type="verbatim">
-       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 1234
-    </exec>
-    <exec seq="start-test1-mcjoin-ipv6" type="verbatim">
-       /root/bin/mcjoin_test start ff02::101 ff02::102 ff02::103 ff02::104 1234
+    <exec seq="start-test1-mcjoin" type="verbatim">
+       /root/bin/mcjoin_test start 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
     </exec>
     <exec seq="stop-test-mcsender" type="verbatim">
        killall mcsender
