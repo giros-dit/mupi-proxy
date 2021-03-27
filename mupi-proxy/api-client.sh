@@ -12,6 +12,7 @@ Select:
 	- [1] MURT ENTRY
 	- [2] PROVIDER
 	- [3] SDN CONTROLLER
+	- [4] FLOWS
 	- [X] EXIT
 "
 
@@ -67,6 +68,18 @@ Select:
 
 "
 
+FLOWS_OPERATION="
+
+###########################################################
+#                     FLOWS OPERATION                     #
+###########################################################
+Select:
+	- [1] Retrieve all Flows installed in the switch
+	- [2] Retrieve all Flows for a specific Murt Entry ID
+	- [B] Back
+
+"
+
 echo "
 
 ###########################################################
@@ -91,7 +104,7 @@ echo "$USAGE"
 while [ True ]
 
 do
-	read -p "Select your option: 1, 2 or 3 ---> " CONFIGURATION
+	read -p "Select your option: 1, 2, 3 or 4 ---> " CONFIGURATION
 	echo "" 
 	OPTION="$CONFIGURATION"
 
@@ -481,6 +494,51 @@ do
 		   fi
 		done
 
+	elif [ "$OPTION" = 4 ]
+	then
+	   echo "FLOWS"
+	   echo "$FLOWS_OPERATION"
+
+	   
+
+	   while [ True ]
+	   do
+
+		   read -p "Select your operation: 1 or 2  ---> " FLOW_OPERATION_SELECTED
+		   echo "" 
+		   OPERATION="$FLOW_OPERATION_SELECTED"
+
+
+		   if [ "$OPERATION" = 1 ]
+			then
+			   echo "FLOWS TABLE"
+			   curl -X  GET http://127.0.0.1:8080/mupi-proxy/flows
+			   echo ""
+			   read -p ""
+			   echo "$FLOWS_OPERATION"
+
+			elif [ "$OPERATION" = 2  ]
+			then
+			   echo "Retrieve the flows with a matching MURT Entry ID"
+			   read -p "Write the murt entry ID requested --> " MURT_ENTRY_ID
+			   ID="$MURT_ENTRY_ID"
+			   curl -X  GET http://127.0.0.1:8080/mupi-proxy/flows/$ID
+			   echo ""
+			   read -p ""
+			   echo "$FLOWS_OPERATION"
+
+			elif [ "$OPERATION" = "B"  ]
+			then
+			   echo "Back"
+			   echo "$USAGE"
+			   break
+			else
+				echo ""       
+			    echo "ERROR: invalid operation"
+			    echo "$FLOWS_OPERATION"
+		   fi
+		done
+	
 	elif [ "$OPTION" = "X" ]
 	then
 	   echo "Bye"

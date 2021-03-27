@@ -119,6 +119,7 @@ class MURT:
         self.logger.debug(f'get_upstream_if query: client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip}, downstream_if={downstream_if}')
         match_entries = {}
         upstream_ifs = []
+        murt_entry_ids = []
 
         client_ip_num = str(IPAddress(client_ip))
         mcast_group_num = str(IPAddress(mcast_group))
@@ -153,13 +154,14 @@ class MURT:
             e = match_entries[key]
             if e['priority'] == max_priority:
                 upstream_ifs.append(e['upstream_if'])
+                murt_entry_ids.append(key)
         self.logger.debug(f'Upstream ifs selected: {upstream_ifs}')
         tiempo_final = time()
         tiempo_ejecucion = tiempo_final - tiempo_inicial
         print ('El tiempo de ejecucion fue:'+ str(tiempo_ejecucion))
-        return upstream_ifs
+        return upstream_ifs, murt_entry_ids
 
-    # Database query
+    # Database query, less efficient
     def get_upstream_if_database(self, client_ip, mcast_group, mcast_src_ip, downstream_if):
         self.logger.info("CONSULTA A LA BBDD")
         tiempo_inicial = time()
@@ -476,6 +478,7 @@ class MURT:
         body = json.dumps(response, indent=4)
         return response
 
+    # Print mcast table
     def print_mcast_table(self, mcast_table, extended):
         if extended:
             self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:16}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority','id') )
@@ -507,6 +510,7 @@ class MURT:
                 self.logger.info( '{:25} {:^14} {:25} {:25} {:^12} {:^8} '.format(e['client_ip'], e['downstream_if'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
             self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} '.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------') )
 
+    # Return mcast table
     def get_mcast_table(self, format, extended):
         if format == 'json':
             if extended:
@@ -525,6 +529,8 @@ class MURT:
 ###############################################
 #PROVIDER
 ###############################################
+    # Example of how to use complex query in mongodb
+    # Search providers who broadcast a requested channel
     def who_has_a_channel(self, id):
         result = {}
         providers = list(self.db.providers.aggregate([{"$unwind":"$mcast_groups"},{"$match":{"mcast_groups":id}}]))
@@ -706,6 +712,7 @@ class MURT:
         body = json.dumps(response, indent=4)
         return response
 
+    # Print providers table
     def print_provider_table(self, provider_table):
         self.logger.info( '{:20} {:25} {:20} {:80} '.format('Description', 'mcast_src_ip', 'upstream_if', 'mcast_groups'))
         self.logger.info( '{:20} {:25} {:20} {:80} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
@@ -714,6 +721,7 @@ class MURT:
             self.logger.info( '{:20} {:25} {:20} {:80} '.format(e['description'], e['mcast_src_ip'], e['upstream_if'], str(e['mcast_groups'])) )
         self.logger.info( '{:20} {:25} {:20} {:80} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
 
+    # Get providers table
     def get_provider_table(self, format, extended):
         if format == 'json':
             if extended:
@@ -893,6 +901,7 @@ class MURT:
         body = json.dumps(response, indent=4)
         return response
 
+    #Print controllers table
     def print_controller_table(self, controller_table):
         self.logger.info( '{:20} {:25} {:20} {:30} '.format('Description', 'OpenFlow-Version', 'TCP Port', 'IP Address'))
         self.logger.info( '{:20} {:25} {:20} {:30} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
@@ -901,6 +910,7 @@ class MURT:
             self.logger.info( '{:20} {:25} {:20} {:30} '.format(e['description'], e['openflow_version'], e['tcp_port'], e['ip_address']) )
         self.logger.info( '{:20} {:25} {:20} {:30} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
 
+    #Return controllers table
     def get_controller_table(self, format, extended):
         if format == 'json':
             if extended:
@@ -911,3 +921,30 @@ class MURT:
                     e = self.controllers[key]
                     controllers_table[key] = dict(description=e['description'], openflow_version=e['openflow_version'], tcp_port=e['tcp_port'], ip_address=e['ip_address'])
                 return json.dumps(controllers_table, indent=4)
+
+
+###############################################
+#FLOWS
+###############################################
+    #Print flows table
+    def print_flows_table(self, registered_flows):
+        self.logger.info("REAL TIME FLOWS CONFIGURED IN OVSWITCH")
+        self.logger.info("----------------------------------------------------------------------------------------------------------------------------------------------")
+        self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if'))
+        self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )
+        for key in registered_flows.keys():
+            e = registered_flows[key]
+            self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format(str(e['client_ip']), str(e['downstream_if']), str(e['mcast_group']), str(e['mcast_src_ip']),  str(e['upstream_if'])) )
+        self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )
+
+
+    # Show flows for a specific murt entry id
+    def print_flows_per_murt_table(self, searched_flows, id):
+        self.logger.info("REAL TIME FLOWS CONFIGURED IN OVSWITCH FOR MURT ENTRY ID: " + str(id))
+        self.logger.info("----------------------------------------------------------------------------------------------------------------------------------------------")
+        self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if'))
+        self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )
+        for key in searched_flows.keys():
+            e = searched_flows[key]
+            self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format(str(e['client_ip']), str(e['downstream_if']), str(e['mcast_group']), str(e['mcast_src_ip']),  str(e['upstream_if'])) )
+        self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )

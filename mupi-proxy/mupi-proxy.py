@@ -69,13 +69,16 @@ class MupiMcastProxy (app_manager.RyuApp):
         # MupiProxyApi.set_logger(self.logger)
 
         # Variable initialization
+        self.data = {}
         self.mac_to_port = {}
         self._to_hosts = {}
-        self.data = {}
+        self.switch_event = []
+        #To show flows in real time
+        self.registered_flows = {}
+        #To manage API Operations in Switch in Real Time
+        self.flows_per_murt_entry = {}
         self.murt = McastUpstreamRoutingTable.MURT(self.logger)
-        self.data['mac_to_port'] = self.mac_to_port
-        self.data['_to_hosts'] = self._to_hosts
-        self.data['murt'] = self.murt
+        self.data['main'] = self
         wsgi = kwargs['wsgi']
         wsgi.registory['MupiProxyApi'] = self.data
         wsgi.register(MupiProxyApi, self.data)
@@ -83,7 +86,7 @@ class MupiMcastProxy (app_manager.RyuApp):
         # Read config params from DEFAULT section
         cfg.CONF.register_opts([
             #cfg.StrOpt('mac_to_port', default='Not configured', help = ('A string')),
-            #cfg.StrOpt('to_hosts', default='Not configured', help = ('A string')),
+            #cfg.StrOpt('to_hosts', default='Not configured', help = ('A string')),switch_event
             cfg.IntOpt('test_param1', default='0', help = ('A integer'))])
         #self.mac_to_port = json.loads(cfg.CONF.mac_to_port)
         #self._to_hosts = json.loads(cfg.CONF.to_hosts)
@@ -118,6 +121,8 @@ class MupiMcastProxy (app_manager.RyuApp):
         datapath = ev.msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
+
+        self.switch_event = ev
 
         # Removes any flows that might have been stuck
         match = parser.OFPMatch()
@@ -158,6 +163,7 @@ class MupiMcastProxy (app_manager.RyuApp):
                                     out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY, 
                                     match=match, instructions=inst)
         datapath.send_msg(mod)
+
 
     def do_join(self, in_port, msg, provider, mcast_group, ipversion6):
 
@@ -285,7 +291,15 @@ class MupiMcastProxy (app_manager.RyuApp):
 
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
+        dst = eth.dst
+        src = eth.src
+
+        is_udp = pkt.get_protocol(udp.udp)
+
+        dpid = datapath.id
+        self.mac_to_port.setdefault(dpid, {})
         
+        #Multicast type
         igmp_in = pkt.get_protocol(igmp.igmp)
         mld_in = False
         icmpv6_in = pkt.get_protocol(icmpv6.icmpv6)
@@ -294,7 +308,7 @@ class MupiMcastProxy (app_manager.RyuApp):
             if(icmpv6_in.type_==143):
                 mld_in = icmpv6_in.data
 
-        #IPvX
+        #IPvX Version
         is_ipv6 = pkt.get_protocols(ipv6.ipv6)
         is_ipv4 = pkt.get_protocols(ipv4.ipv4)
         ipversion6 = False
@@ -307,16 +321,7 @@ class MupiMcastProxy (app_manager.RyuApp):
         else:
             self.logger.info("ERROR")
 
-
-        is_udp = pkt.get_protocol(udp.udp)
-
-        dst = eth.dst
-        src = eth.src
-
-        dpid = datapath.id
-        self.mac_to_port.setdefault(dpid, {})
-        
-        #IPV6
+        #Multicast Request
         if(mld_in or (igmp_in and igmp_in.msgtype==0x22)):
             self.logger.info("-- Multicast Listener Report received")
             if(ipversion6):
@@ -339,15 +344,47 @@ class MupiMcastProxy (app_manager.RyuApp):
             else:
                 mcast_src_ip = record.srcs[0]
             #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
-            upstream_ifs = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if
+            upstream_ifs, murt_entry_ids = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if and their IDs
             prueba = self.murt.get_upstream_if_database(client_ip, mcast_group, mcast_src_ip, in_port)
             if upstream_ifs:
-                for provider in upstream_ifs:
+                for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
+                    #Requested Flow + Associated Provider
+                    new_flow = dict(murt_entry_id=murt_entry_id, client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
+                    #Unique ID: Flow + MurtEntry ID
+                    id_flow = str(self.murt.dict_hash(new_flow))
+                    #do_join operation done
+                    operation = dict(id_flow=id_flow, in_port=in_port, msg=msg, provider=provider, mcast_group=mcast_group, ipversion6=ipversion6)
+
                     if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
                         self.logger.info("Join: " + log)
+                        #Add do_join operation to operations dictionary
+                        if murt_entry_id in self.flows_per_murt_entry.keys():
+                            self.flows_per_murt_entry[murt_entry_id].append(operation)
+                        else:
+                            self.flows_per_murt_entry[murt_entry_id] = []
+                            self.flows_per_murt_entry[murt_entry_id].append(operation)
+                        #Add the new flow
+                        self.registered_flows[id_flow] = new_flow
+                        #Perform Do_Join operation
                         self.do_join(in_port, msg, provider, mcast_group, ipversion6)
                     elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
                         self.logger.info("Leave: " + log)
+                        if id_flow in self.registered_flows.keys():
+                            #Registered operations for a specific murt entry ID
+                            all_operations = self.flows_per_murt_entry[murt_entry_id]
+                            searched_index = -1
+                            for idx, op in enumerate(all_operations):
+                                if op['id_flow'] == id_flow:
+                                    searched_index = idx
+                            if searched_index != -1:
+                                all_operations.pop(searched_index)
+                                if len(all_operations) == 0:
+                                    #Eliminate murt entry ID if there aren't operations
+                                    del self.flows_per_murt_entry[murt_entry_id]
+                                else:
+                                    #Save pending operations for a specific murt_entry_id
+                                    self.flows_per_murt_entry[murt_entry_id] = all_operations
+                            del self.registered_flows[id_flow]
                         self.do_leave(in_port, msg, provider, mcast_group, ipversion6)
             else: 
                 self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip})')
@@ -395,19 +432,51 @@ class MupiProxyApi(ControllerBase):
     # _LOGGER = None
     def __init__(self, req, link, data, **config):
         super(MupiProxyApi, self).__init__(req, link, data, **config)
-        self.mac_to_port = data['mac_to_port']
-        self._to_hosts = data['_to_hosts']
-        self.murt = data['murt']
+        self.mupi_proxy = data['main']
+
+###############################################
+#REAL TIME FLOWS
+###############################################
+    # Show all used flows in real time
+    @route('mupiproxy', BASE_URL + '/flows', methods=['GET'])
+    def get_flows(self, req, **_kwargs):
+        table_flows = self.mupi_proxy.murt.print_flows_table(self.mupi_proxy.registered_flows)
+        body = json.dumps(self.mupi_proxy.registered_flows, indent=4)
+        return Response(content_type='application/json', status=200, body=body)
+
+    # Show flows for a specific murt entry id
+    @route('mupiproxy', BASE_URL + '/flows/{entry_id}', methods=['GET'])
+    def get_flows_per_murt_entry(self, req, entry_id, **_kwargs):
+        try:
+            requested_id = str(entry_id)
+            if requested_id in self.mupi_proxy.flows_per_murt_entry.keys():
+                operations = self.mupi_proxy.flows_per_murt_entry[requested_id]
+                searched_flows = {}
+                for operation in operations:
+                    searched_id = operation["id_flow"]
+                    if searched_id in self.mupi_proxy.registered_flows:
+                        searched_flows[searched_id] = self.mupi_proxy.registered_flows[searched_id]
+                body = json.dumps(searched_flows, indent=4)
+                table_flows = self.mupi_proxy.murt.print_flows_per_murt_table(searched_flows, requested_id)
+            else:
+                response = "No flows for murt entry with id: " + str(requested_id)
+                body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=200, body=body)   
+        except:
+            response = "[ERROR] Wrong id: " + str(entry_id)
+            body = json.dumps(response, indent=4)
+            raise Response(content_type='application/json', status=500, body=body)
 
 
 ###############################################
 #MURT ENTRY
 ###############################################
+    # Print mcast table
     @route('mupiproxy', BASE_URL + '/murtentries-table', methods=['GET'])
     def get_murt_table(self, req, **_kwargs):
         format = "json"
-        body = self.murt.get_mcast_table(format, True)
-        table = self.murt.print_mcast_table(self.murt.mcast_upstream_routing, False)
+        body = self.mupi_proxy.murt.get_mcast_table(format, True)
+        table = self.mupi_proxy.murt.print_mcast_table(self.mupi_proxy.murt.mcast_upstream_routing, False)
         return Response(content_type='application/json', status=200, body=body)
 
 
@@ -415,7 +484,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['GET'])
     def get_murt_entries(self, req, **_kwargs):
         try:
-            murtentries = self.murt.retrieve_murt_entries()
+            murtentries = self.mupi_proxy.murt.retrieve_murt_entries()
             return Response(content_type='application/json', status=200, body=murtentries)
         except ValueError:
             response = "[ERROR]"
@@ -426,7 +495,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['GET'])
     def get_murt_entry(self, req, entry_id, **_kwargs):
         try:
-            murt_entry = self.murt.retrieve_murt_entry(entry_id)
+            murt_entry = self.mupi_proxy.murt.retrieve_murt_entry(entry_id)
             return Response(content_type='application/json', status=200, body=murt_entry)
         except:
             response = "[ERROR] Wrong id: " + str(entry_id)
@@ -448,7 +517,7 @@ class MupiProxyApi(ControllerBase):
             return Response(content_type='application/json', status=400, body=body)
         else:
             try:
-                entry_added = self.murt.add_murt_entry(new_entry)
+                entry_added = self.mupi_proxy.murt.add_murt_entry(new_entry)
                 if entry_added:
                     return Response(content_type='application/json', status=200, body=entry_added)
                 else:
@@ -468,7 +537,7 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
         try:
-            updated_murt_entry = self.murt.update_murt_entry(entry_id, new_data)
+            updated_murt_entry = self.mupi_proxy.murt.update_murt_entry(entry_id, new_data)
             return Response(content_type='application/json', status=200, body=updated_murt_entry)
         except:
             response = "[ERROR]"
@@ -479,7 +548,28 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/murtentries/{entry_id}', methods=['DELETE'])
     def delete_murt_entry(self, req, entry_id, **_kwargs):
         try:
-            result = self.murt.delete_murt_entry(entry_id)
+            #Update flow tables
+            #Registered operations for a specific murt entry ID
+            requested_id = str(entry_id)
+            if requested_id in self.mupi_proxy.flows_per_murt_entry.keys():
+                do_leave_operations = self.mupi_proxy.flows_per_murt_entry[requested_id]
+                for operation in do_leave_operations:
+                    id_flow = operation["id_flow"]
+                    if id_flow in self.mupi_proxy.registered_flows.keys():
+                        del self.mupi_proxy.registered_flows[id_flow]
+                    #Do leave operation to eliminate the flow installed in the switch
+                    in_port = operation["in_port"]
+                    msg = operation["msg"]
+                    provider = operation["provider"]
+                    mcast_group = operation["mcast_group"]
+                    ipversion6 = operation["ipversion6"]
+                    self.mupi_proxy.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+                    try:
+                        del self.mupi_proxy.flows_per_murt_entry[requested_id]
+                    except:
+                        error = True
+            #API Request
+            result = self.mupi_proxy.murt.delete_murt_entry(entry_id)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -490,7 +580,13 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['DELETE'])
     def delete_murt_entries(self, req, **_kwargs):
         try:
-            result = self.murt.delete_murt_entries()
+            #Reset tables
+            event = self.mupi_proxy.switch_event
+            self.mupi_proxy.switch_features_handler(event)
+            self.mupi_proxy.registered_flows = {}
+            self.mupi_proxy.flows_per_murt_entry = {}
+            #API Request
+            result = self.mupi_proxy.murt.delete_murt_entries()
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -506,9 +602,9 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/channel/{channel_id}', methods=['GET'])
     def who_has_a_channel(self, req, channel_id, **_kwargs):
         try:
-            providers = self.murt.who_has_a_channel(channel_id)
+            providers = self.mupi_proxy.murt.who_has_a_channel(channel_id)
             if len(providers) != 0:
-                table = self.murt.print_provider_table(providers)
+                table = self.mupi_proxy.murt.print_provider_table(providers)
                 body = json.dumps(providers, indent=4)
             else:
                 response = "There aren't providers who broadcast the requested channel: " + str(channel_id)
@@ -519,13 +615,13 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
 
-    #
+    # Print providers table
     @route('mupiproxy', BASE_URL + '/providers-table', methods=['GET'])
     def get_providers_table(self, req, **_kwargs):
         format = "json"
         extended = True
-        body = self.murt.get_provider_table(format, extended)
-        table = self.murt.print_provider_table(self.murt.providers)
+        body = self.mupi_proxy.murt.get_provider_table(format, extended)
+        table = self.mupi_proxy.murt.print_provider_table(self.mupi_proxy.murt.providers)
         return Response(content_type='application/json', status=200, body=body)
 
 
@@ -533,7 +629,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers', methods=['GET'])
     def get_providers(self, req, **_kwargs):
         try:
-            providers = self.murt.retrieve_providers()
+            providers = self.mupi_proxy.murt.retrieve_providers()
             return Response(content_type='application/json', status=200, body=providers)
         except ValueError:
             response = "[ERROR]"
@@ -544,7 +640,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['GET'])
     def get_provider(self, req, provider_id, **_kwargs):
         try:
-            provider = self.murt.retrieve_provider(provider_id)
+            provider = self.mupi_proxy.murt.retrieve_provider(provider_id)
             return Response(content_type='application/json', status=200, body=provider)
         except:
             response = "[ERROR] Wrong id: " + str(provider_id)
@@ -566,7 +662,7 @@ class MupiProxyApi(ControllerBase):
             return Response(content_type='application/json', status=400, body=body)
         else:
             try:
-                provider_added = self.murt.add_provider(new_provider)
+                provider_added = self.mupi_proxy.murt.add_provider(new_provider)
                 if provider_added:
                     return Response(content_type='application/json', status=200, body=provider_added)
                 else:
@@ -586,7 +682,7 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
         try:
-            updated_provider = self.murt.update_provider(provider_id, new_data)
+            updated_provider = self.mupi_proxy.murt.update_provider(provider_id, new_data)
             return Response(content_type='application/json', status=200, body=updated_provider)
         except:
             response = "[ERROR]"
@@ -597,7 +693,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['DELETE'])
     def delete_provider(self, req, provider_id, **_kwargs):
         try:
-            result = self.murt.delete_provider(provider_id)
+            result = self.mupi_proxy.murt.delete_provider(provider_id)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -608,7 +704,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers', methods=['DELETE'])
     def delete_providers(self, req, **_kwargs):
         try:
-            result = self.murt.delete_providers()
+            result = self.mupi_proxy.murt.delete_providers()
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -620,12 +716,13 @@ class MupiProxyApi(ControllerBase):
 ###############################################
 #SDN CONTROLLER
 ###############################################
+    # Print controllers table
     @route('mupiproxy', BASE_URL + '/controllers-table', methods=['GET'])
     def get_controllers_table(self, req, **_kwargs):
         format = "json"
         extended = True
-        body = self.murt.get_controller_table(format, extended)
-        table = self.murt.print_controller_table(self.murt.controllers)
+        body = self.mupi_proxy.murt.get_controller_table(format, extended)
+        table = self.mupi_proxy.murt.print_controller_table(self.mupi_proxy.murt.controllers)
         return Response(content_type='application/json', status=200, body=body)
 
 
@@ -633,7 +730,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/controllers', methods=['GET'])
     def get_controllers(self, req, **_kwargs):
         try:
-            controllers = self.murt.retrieve_controllers()
+            controllers = self.mupi_proxy.murt.retrieve_controllers()
             return Response(content_type='application/json', status=200, body=controllers)
         except ValueError:
             response = "[ERROR]"
@@ -644,7 +741,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/controllers/{controller_id}', methods=['GET'])
     def get_controller(self, req, controller_id, **_kwargs):
         try:
-            controller = self.murt.retrieve_controller(controller_id)
+            controller = self.mupi_proxy.murt.retrieve_controller(controller_id)
             return Response(content_type='application/json', status=200, body=controller)
         except:
             response = "[ERROR] Wrong id: " + str(controller_id)
@@ -666,7 +763,7 @@ class MupiProxyApi(ControllerBase):
             return Response(content_type='application/json', status=400, body=body)
         else:
             try:
-                controller_added = self.murt.add_controller(new_controller)
+                controller_added = self.mupi_proxy.murt.add_controller(new_controller)
                 if controller_added:
                     return Response(content_type='application/json', status=200, body=controller_added)
                 else:
@@ -686,7 +783,7 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
         try:
-            updated_controller = self.murt.update_controller(controller_id, new_data)
+            updated_controller = self.mupi_proxy.murt.update_controller(controller_id, new_data)
             return Response(content_type='application/json', status=200, body=updated_controller)
         except:
             response = "[ERROR]"
@@ -697,7 +794,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/controllers/{controller_id}', methods=['DELETE'])
     def delete_controller(self, req, controller_id, **_kwargs):
         try:
-            result = self.murt.delete_controller(controller_id)
+            result = self.mupi_proxy.murt.delete_controller(controller_id)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -708,7 +805,7 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/controllers', methods=['DELETE'])
     def delete_controllers(self, req, **_kwargs):
         try:
-            result = self.murt.delete_controllers()
+            result = self.mupi_proxy.murt.delete_controllers()
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
