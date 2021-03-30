@@ -299,42 +299,31 @@ class MupiMcastProxy (app_manager.RyuApp):
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
         
-        #Multicast type
-        igmp_in = pkt.get_protocol(igmp.igmp)
-        mld_in = False
-        icmpv6_in = pkt.get_protocol(icmpv6.icmpv6)
-        if(icmpv6_in):
-            self.logger.info("-- ICMPv6 Packet Received")
-            if(icmpv6_in.type_==143):
-                mld_in = icmpv6_in.data
-
-        #IPvX Version
-        is_ipv6 = pkt.get_protocols(ipv6.ipv6)
+        #IPvX Version and Multicast Type
+        mcast_in = False
         is_ipv4 = pkt.get_protocols(ipv4.ipv4)
-        ipversion6 = False
-        if(is_ipv6):
-            ipv6_in = is_ipv6[0]
-            ipversion6 = True
-        elif(is_ipv4):
-            ipv4_in = is_ipv4[0]
+        if is_ipv4:
             ipversion6 = False
-        else:
-            self.logger.info("ERROR")
-
-        #Multicast Request
-        if(mld_in or (igmp_in and igmp_in.msgtype==0x22)):
-            self.logger.info("-- Multicast Listener Report received")
-            if(ipversion6):
-                self.logger.info("---- MLDv2 Multicast Listener Report received")
-                log = "SW=%s PORT=%d ICMPv6-MLD received. " % (dpid_to_str(dpid), in_port)
-                mcast_in = mld_in
-                ip_in = ipv6_in
-            else:
+            ip_in = is_ipv4[0]
+            igmp_in = pkt.get_protocol(igmp.igmp)
+            if (igmp_in and igmp_in.msgtype==0x22):
+                self.logger.info("-- Multicast Listener Report received")
                 self.logger.info("---- IGMPv3 Membership Report reveived")
                 log = "SW=%s PORT=%d IGMP received. " % (dpid_to_str(dpid), in_port)
                 mcast_in = igmp_in
-                ip_in = ipv4_in
+        else:
+            ipversion6 = True
+            is_ipv6 = pkt.get_protocols(ipv6.ipv6)
+            ip_in = is_ipv6[0]
+            icmpv6_in = pkt.get_protocol(icmpv6.icmpv6)
+            if(icmpv6_in and icmpv6_in.type_==143):
+                self.logger.info("-- Multicast Listener Report received")
+                self.logger.info("---- MLDv2 Multicast Listener Report received")
+                log = "SW=%s PORT=%d ICMPv6-MLD received. " % (dpid_to_str(dpid), in_port)
+                mcast_in = icmpv6_in.data
 
+        #Multicast Request
+        if(mcast_in):
             record = mcast_in.records[0]
             client_ip = ip_in.src
             mcast_group = record.address
@@ -389,10 +378,8 @@ class MupiMcastProxy (app_manager.RyuApp):
             else: 
                 self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip})')
 
-        elif(is_udp and dst[:8] == '33:33:00'): #Prints when no client is listening in the multicast group
-            self.logger.info(f"Multicast packet received (src={ipv6_in.src}, dst_ip={ipv6_in.dst}), but no clients listening. Discarding...")
-        elif(is_udp and dst[:8] == '01:00:5e'): #Prints when no client is listening in the multicast group
-            self.logger.info(f"Multicast packet received (src={ipv4_in.src}, dst_ip={ipv4_in.dst}), but no clients listening. Discarding...")
+        elif(is_udp and (dst[:8] == '33:33:00' or dst[:8] == '01:00:5e')): #Prints when no client is listening in the multicast group
+            self.logger.info(f"Multicast packet received (src={ip_in.src}, dst_ip={ip_in.dst}), but no clients listening. Discarding...")
 
         else: #Normal switch - Example simple_switch_13.py
             self.logger.info("No ICMPv6-MLDv2, No IGMPv3 ---> NORMAL SWITCH")
