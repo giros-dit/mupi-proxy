@@ -219,7 +219,7 @@ do
 			   fi
 			elif [ "$OPERATION" = 7  ]
 			then
-			   echo "MURT ENTRY TRABLE"
+			   echo "MURT ENTRY TABLE"
 			   curl -X  GET http://127.0.0.1:8080/mupi-proxy/murtentries-table
 			   echo ""
 			   read -p ""
@@ -342,7 +342,7 @@ do
 			   fi
 			elif [ "$OPERATION" = 7  ]
 			then
-			   echo "PROVIDERS TRABLE"
+			   echo "PROVIDERS TABLE"
 			   curl -X  GET http://127.0.0.1:8080/mupi-proxy/providers-table
 			   echo ""
 			   read -p ""
@@ -394,7 +394,7 @@ do
 
 			elif [ "$OPERATION" = 2  ]
 			then
-			   echo "Add a new Provider into to the database"
+			   echo "Add a new Controller into to the database"
 			   read -p "OpenFlow Version: ------> " OPENFLOW_VERSION
 			   read -p "TCP PORT: ---> " TCP_PORT
 			   read -p "IP ADDRESS: ----> " IP_ADDRESS
@@ -477,7 +477,7 @@ do
 			   fi
 			elif [ "$OPERATION" = 7  ]
 			then
-			   echo "CONTROLLERS TRABLE"
+			   echo "CONTROLLERS TABLE"
 			   curl -X  GET http://127.0.0.1:8080/mupi-proxy/controllers-table
 			   echo ""
 			   read -p ""

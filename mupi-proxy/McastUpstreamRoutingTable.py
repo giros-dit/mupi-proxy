@@ -49,6 +49,10 @@ class MURT:
         self.mcast_upstream_routing = {}
         self.providers = {}
         self.controllers = {}
+        #To show flows in real time
+        self.registered_flows = {}
+        #To manage API Operations in Switch in Real Time
+        self.flows_per_murt_entry = {}
         self.logger = logger
         self.client = MongoClient(MONGO_DETAILS)
         self.db= self.client.mupiproxy
@@ -458,18 +462,25 @@ class MURT:
     def delete_murt_entry(self, id):
         if id in self.mcast_upstream_routing:
             murtentry = self.mcast_upstream_routing[id]
+            requested_id = str(id)
+            flows_to_delete = self.find_flows(id)
+            if len(flows_to_delete) == 0:
+                flows_to_delete = -1
             del self.mcast_upstream_routing[id]
             myquery = { "_id": id }
             self.db.murtentries.delete_one(myquery)
             response = "Deleted entry with id: " + str(id)
         else:
             response = "No murt entry with id: " + str(id)
+            flows_to_delete = -1
         body = json.dumps(response, indent=4)
-        return body
+        return body, flows_to_delete
 
     # Clear murt entries: deletes all entries from MURT
     def delete_murt_entries(self):
         self.mcast_upstream_routing = {}
+        self.registered_flows = {}
+        self.flows_per_murt_entry = {}
         result = self.db.murtentries.delete_many({})
         if (len(self.mcast_upstream_routing) == 0 and result.deleted_count != 0):
             response = str(result.deleted_count) + " murt entries deleted."
@@ -692,18 +703,30 @@ class MURT:
     def delete_provider(self, id):
         if id in self.providers:
             provider = self.providers[id]
+            upstream_if = provider["upstream_if"]
             del self.providers[id]
             myquery = { "_id": id }
             self.db.providers.delete_one(myquery)
             response = "Deleted provider with id: " + str(id)
+            entries_to_delete = self.delete_associated_entries(upstream_if)
+            all_operations = []
+            for entry in entries_to_delete:
+                response_tmp, ops = self.delete_murt_entry(entry["_id"])
+                if ops != -1:
+                    for operation in ops:
+                        all_operations.append(operation)
         else:
             response = "No provider with id: " + str(id)
+            all_operations = -1
         body = json.dumps(response, indent=4)
-        return body
+        return body, all_operations
 
     # Clear content providers: deletes all the content providers from the multicast proxy
     def delete_providers(self):
         self.providers = {}
+        self.mcast_upstream_routing = {}
+        self.registered_flows = {}
+        self.flows_per_murt_entry = {}
         result = self.db.providers.delete_many({})
         if (len(self.providers) == 0 and result.deleted_count != 0):
             response = str(result.deleted_count) + " providers deleted."
@@ -948,3 +971,31 @@ class MURT:
             e = searched_flows[key]
             self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format(str(e['client_ip']), str(e['downstream_if']), str(e['mcast_group']), str(e['mcast_src_ip']),  str(e['upstream_if'])) )
         self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )
+
+
+    #Find flows for a specific murt_entry_id. Create an array with all operations to do leave
+    def find_flows(self, requested_id):
+        flows_to_delete = []
+        #Update flow tables
+        #Registered operations for a specific murt entry ID
+        if requested_id in self.flows_per_murt_entry.keys():
+            do_leave_operations = self.flows_per_murt_entry[requested_id]
+            for operation in do_leave_operations:
+                id_flow = operation["id_flow"]
+                if id_flow in self.registered_flows.keys():
+                    del self.registered_flows[id_flow]
+                flows_to_delete.append(operation)
+                try:
+                    del self.mupi_proxy.flows_per_murt_entry[requested_id]
+                except:
+                    error = True
+        return flows_to_delete
+
+    #Delete all entries associated to a deleted provider
+    def delete_associated_entries(self, upstream_if):
+        all_flows = []
+        requested_if = str(upstream_if)
+        for entry in self.mcast_upstream_routing:
+            if requested_if == str(self.mcast_upstream_routing[entry]["upstream_if"]):
+                all_flows.append(self.mcast_upstream_routing[entry])
+        return all_flows
