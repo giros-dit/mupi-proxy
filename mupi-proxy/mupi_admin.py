@@ -52,7 +52,7 @@ class mupi_admin():
 							wait = input('Next Operation... ')
 						elif operation == 3:
 							print("Retrieve a MURT Entry with a matching ID")
-							response = json.dumps(self.get_murt_entry(), indent=4)	
+							response = json.dumps(self.get_murt_entry()[0], indent=4)	
 							print(response)
 							wait = input('Next Operation... ')
 						elif operation == 4:
@@ -99,7 +99,7 @@ class mupi_admin():
 							wait = input('Next Operation... ')
 						elif operation == 3:
 							print("Retrieve a Provider with a matching ID")
-							response = json.dumps(self.get_provider(), indent=4)	
+							response = json.dumps(self.get_provider()[0], indent=4)	
 							print(response)
 							wait = input('Next Operation... ')
 						elif operation == 4:
@@ -151,7 +151,7 @@ class mupi_admin():
 							wait = input('Next Operation... ')
 						elif operation == 3:
 							print("Retrieve a Controller with a matching ID")
-							response = json.dumps(self.get_controller(), indent=4)	
+							response = json.dumps(self.get_controller()[0], indent=4)	
 							print(response)
 							wait = input('Next Operation... ')
 						elif operation == 4:
@@ -334,16 +334,22 @@ class mupi_admin():
 	def update_murt_entry():
 		try:
 			entry, murt_entry_id = mupi_admin.get_murt_entry()
-			print(entry)
-			URL = BASE_URL + "murtentries/" + str(murt_entry_id)
-			new_entry = input('Type the field to update: {"key":"value",...}: ')
-			print(new_entry)
-			confirmation = input('Type "y" to confirm your entry: ')
-			if confirmation == "y":
-				resp = requests.put(URL, headers = headers, data=new_entry)
-				murt_entry = json.dumps(resp.json(), indent=4)	
+			response = json.dumps(entry, indent=4)
+			bad_request = "No murt entry with id: " + str(murt_entry_id)
+			bad_request = json.dumps(bad_request, indent=4) 
+			if response == bad_request:
+				murt_entry = response
 			else:
-				murt_entry = "Discarded Operation"
+				print(response)
+				URL = BASE_URL + "murtentries/" + str(murt_entry_id)
+				new_entry = input('Type the field to update: {"key":"value",...}: ')
+				print(new_entry)
+				confirmation = input('Type "y" to confirm your entry: ')
+				if confirmation == "y":
+					resp = requests.put(URL, headers = headers, data=new_entry)
+					murt_entry = json.dumps(resp.json(), indent=4)	
+				else:
+					murt_entry = "Discarded Operation"
 		except ValueError:
 			murt_entry = "Incorrect Values"
 		return murt_entry
@@ -428,7 +434,7 @@ class mupi_admin():
 			description = input('Provider Description: ')
 			mcast_src_ip = input('Multicast Source IP: ')
 			upstream_if = input('Upstream Interface: ')
-			mcast_groups = input('Multicast Groups ["ip1", "ip2",...]: ')
+			mcast_groups = input('Multicast Groups [ip1, ip2,...]: ')
 			new_provider = {"description":description, "mcast_src_ip":mcast_src_ip, "upstream_if":upstream_if, "mcast_groups":mcast_groups}
 			new_provider = json.dumps(new_provider)
 			print(new_provider)
@@ -455,21 +461,26 @@ class mupi_admin():
 
 	def update_provider():
 		try:
-			provider, provider_id = mupi_admin.get_mprovider()
-			print(provider)
-			URL = BASE_URL + "providers/" + str(provider_id)
-			new_provider = input('Type the field to update: {"key":"value",...}: ')
-			print(new_provider)
-			confirmation = input('Type "y" to confirm your entry: ')
-			if confirmation == "y":
-				resp = requests.put(URL, headers = headers, data=new_provider)
-				updated_provider = json.dumps(resp.json(), indent=4)	
-			else:
-				updated_provider = "Discarded Operation"
+			provider, provider_id = mupi_admin.get_provider()
+			response = json.dumps(provider, indent=4)
+			bad_request = "No provider with id: " + str(provider_id)
+			bad_request = json.dumps(bad_request, indent=4) 
+			if response == bad_request:
+				updated_provider = response
+			else:		
+				print(response)
+				URL = BASE_URL + "providers/" + str(provider_id)
+				new_provider = input('Type the field to update: {"key":"value",...}: ')
+				print(new_provider)
+				confirmation = input('Type "y" to confirm your entry: ')
+				if confirmation == "y":
+					resp = requests.put(URL, headers = headers, data=new_provider)
+					updated_provider = json.dumps(resp.json(), indent=4)	
+				else:
+					updated_provider = "Discarded Operation"
 		except ValueError:
 			updated_provider = "Incorrect Values"
 		return updated_provider
-
 
 	def delete_provider():
 		try:
@@ -568,20 +579,25 @@ class mupi_admin():
 	def update_controller():
 		try:
 			controller, controller_id = mupi_admin.get_controller()
-			print(controller)
-			URL = BASE_URL + "controllers/" + str(controller_id)
-			new_controller = input('Type the field to update: {"key":"value",...}: ')
-			print(new_controller)
-			confirmation = input('Type "y" to confirm your entry: ')
-			if confirmation == "y":
-				resp = requests.put(URL, headers = headers, data=new_controller)
-				controller = json.dumps(resp.json(), indent=4)	
-			else:
-				controller = "Discarded Operation"
+			response = json.dumps(controller, indent=4)
+			bad_request = "No controller with id: " + str(controller_id)
+			bad_request = json.dumps(bad_request, indent=4) 
+			if response == bad_request:
+				controller = response
+			else:	
+				print(response)
+				URL = BASE_URL + "controllers/" + str(controller_id)
+				new_controller = input('Type the field to update: {"key":"value",...}: ')
+				print(new_controller)
+				confirmation = input('Type "y" to confirm your entry: ')
+				if confirmation == "y":
+					resp = requests.put(URL, headers = headers, data=new_controller)
+					controller = json.dumps(resp.json(), indent=4)	
+				else:
+					controller = "Discarded Operation"
 		except ValueError:
 			controller = "Incorrect Values"
 		return controller
-
 
 	def delete_controller():
 		try:
