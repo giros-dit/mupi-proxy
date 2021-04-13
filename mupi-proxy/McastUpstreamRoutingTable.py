@@ -94,6 +94,7 @@ class MURT:
             "mcast_src_ip": provider["mcast_src_ip"],
             "upstream_if": provider["upstream_if"],
             "mcast_groups": provider["mcast_groups"],
+            "status": provider["status"],
         }
 
 
@@ -105,6 +106,7 @@ class MURT:
             "mcast_src_ip": murtentry["mcast_src_ip"],
             "upstream_if": murtentry["upstream_if"],
             "priority": murtentry["priority"],
+            "status": murtentry["status"],
         }
 
 
@@ -132,7 +134,7 @@ class MURT:
         #for e in self.mcast_upstream_routing:
         for key in self.mcast_upstream_routing.keys():
             e = self.mcast_upstream_routing[key]
-            if ( mcast_src_ip != '' and mcast_src_ip != None ):
+            if ( mcast_src_ip != '' and mcast_src_ip != None and e['status'] == "Enabled" ):
                 mcast_src_ip_num = str(IPAddress(mcast_src_ip))
                 if (      ( e['client_ip_first'] == ''    or ( client_ip_num    >= e['client_ip_first']    and client_ip_num    <= e['client_ip_last'] ) ) 
                       and ( e['mcast_group_first'] == ''  or ( mcast_group_num  >= e['mcast_group_first']  and mcast_group_num  <= e['mcast_group_last']  ))
@@ -144,7 +146,8 @@ class MURT:
             else:
                 if (      ( e['client_ip_first'] == ''    or ( client_ip_num    >= e['client_ip_first']    and client_ip_num    <= e['client_ip_last'] ) ) 
                         and ( e['mcast_group_first'] == ''  or ( mcast_group_num  >= e['mcast_group_first']  and mcast_group_num  <= e['mcast_group_last']  )) 
-                        and ( e['downstream_if'] == '' or ( str(downstream_if) == e['downstream_if']) )):
+                        and ( e['downstream_if'] == '' or ( str(downstream_if) == e['downstream_if']) )
+                        and (e['status'] == "Enabled")):
                     match_entries[key] = e
                     if e['priority'] > max_priority:
                         max_priority = e['priority']
@@ -289,7 +292,7 @@ class MURT:
         new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                            mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                            mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                           upstream_if=entry["upstream_if"], priority=entry["priority"])
+                           upstream_if=entry["upstream_if"], priority=entry["priority"], status="Enabled")
 
         proposed_id = self.dict_hash(new_entry)
         if proposed_id in self.mcast_upstream_routing:
@@ -358,7 +361,7 @@ class MURT:
         new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if, \
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=entry[4], priority=entry[5])
+                                   upstream_if=entry[4], priority=entry[5], status="Enabled")
 
         proposed_id = self.dict_hash(new_entry)
         if proposed_id in self.mcast_upstream_routing:
@@ -449,7 +452,7 @@ class MURT:
             new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=upstream_if, priority=priority)
+                                   upstream_if=upstream_if, priority=priority, status=murtentry["status"])
          
             myquery = { "_id": id }
             self.db.murtentries.update(myquery, new_entry)    
@@ -492,8 +495,8 @@ class MURT:
     # Print mcast table
     def print_mcast_table(self, mcast_table, extended):
         if extended:
-            self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:16}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority','id') )
-            self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
+            self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:12} {:16}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority','status','id') )
+            self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------','----------------') )
             #for e in mcast_table:
             for key in mcast_table.keys():
                 e = mcast_table[key]
@@ -509,17 +512,17 @@ class MURT:
                     mcast_src_ip = str(IPAddress(e['mcast_src_ip_first'])) + '-' + str(IPAddress(e['mcast_src_ip_last']))
                 else:
                     mcast_src_ip = ''
-                self.logger.info( '{:31} {:^14} {:31} {:31} {:^12} {:^8} {}'.format(client_ip, e['downstream_if'], mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], key ))
-            self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
+                self.logger.info( '{:31} {:^14} {:31} {:31} {:^12} {:^8} {:12} {16}'.format(client_ip, e['downstream_if'], mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], e['status'],key ))
+            self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
 
 
         else:
-            self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} '.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority') )
-            self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} '.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------') )
+            self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'status') )
+            self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------', '------------') )
             for key in mcast_table.keys():
                 e = mcast_table[key]
-                self.logger.info( '{:25} {:^14} {:25} {:25} {:^12} {:^8} '.format(e['client_ip'], e['downstream_if'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
-            self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} '.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------') )
+                self.logger.info( '{:25} {:^14} {:25} {:25} {:^12} {:^8} {:12}'.format(e['client_ip'], e['downstream_if'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority'], e['status']) )
+            self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------', '------------') )
 
     # Return mcast table
     def get_mcast_table(self, format, extended):
@@ -531,7 +534,7 @@ class MURT:
                 for key in self.mcast_upstream_routing.keys():
                     e = self.mcast_upstream_routing[key]
                     mcast_table[key] = dict(client_ip=e['client_ip'], downstream_if=e['downstream_if'], mcast_group=e['mcast_group'],
-                                            mcast_src_ip=e['mcast_src_ip'], upstream_if=e['upstream_if'], priority=e['priority'])
+                                            mcast_src_ip=e['mcast_src_ip'], upstream_if=e['upstream_if'], priority=e['priority'], status=e['status'])
                 return json.dumps(mcast_table, indent=4)
 
 
@@ -625,7 +628,7 @@ class MURT:
 
      
         new_provider = dict(description=description, mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last, \
-                           upstream_if=upstream_if, mcast_groups=mcast_groups)
+                           upstream_if=upstream_if, mcast_groups=mcast_groups, status="Enabled")
 
         proposed_id = self.dict_hash(new_provider)
         if proposed_id in self.providers:
@@ -690,7 +693,7 @@ class MURT:
                 mcast_groups = provider["mcast_groups"]
 
             new_provider = dict(description=description, mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last, \
-                           upstream_if=upstream_if, mcast_groups=mcast_groups)
+                           upstream_if=upstream_if, mcast_groups=mcast_groups, status = provider["status"])
          
             myquery = { "_id": id }
             self.db.providers.update(myquery, new_provider)    
@@ -708,7 +711,7 @@ class MURT:
             myquery = { "_id": id }
             self.db.providers.delete_one(myquery)
             response = "Deleted provider with id: " + str(id)
-            entries_to_delete = self.delete_associated_entries(upstream_if)
+            entries_to_delete = self.find_associated_entries(upstream_if)
             all_operations = []
             for entry in entries_to_delete:
                 response_tmp, ops = self.delete_murt_entry(entry["_id"])
@@ -737,12 +740,12 @@ class MURT:
 
     # Print providers table
     def print_provider_table(self, provider_table):
-        self.logger.info( '{:20} {:25} {:20} {:80} '.format('Description', 'mcast_src_ip', 'upstream_if', 'mcast_groups'))
-        self.logger.info( '{:20} {:25} {:20} {:80} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
+        self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format('Description', 'mcast_src_ip', 'upstream_if', 'mcast_groups', 'status'))
+        self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format('-----------------', '-------------------', '--------------------', '-----------------', '------------') )
         for key in provider_table.keys():
             e = provider_table[key]
-            self.logger.info( '{:20} {:25} {:20} {:80} '.format(e['description'], e['mcast_src_ip'], e['upstream_if'], str(e['mcast_groups'])) )
-        self.logger.info( '{:20} {:25} {:20} {:80} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
+            self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format(e['description'], e['mcast_src_ip'], e['upstream_if'], str(e['mcast_groups']), e['status']) )
+        self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format('-----------------', '-------------------', '--------------------', '-----------------', '------------') )
 
     # Get providers table
     def get_provider_table(self, format, extended):
@@ -753,8 +756,90 @@ class MURT:
                 providers_table = {}
                 for key in self.providers.keys():
                     e = self.providers[key]
-                    providers_table[key] = dict(description=e['description'], mcast_src_ip=e['mcast_src_ip'], upstream_if=e['upstream_if'], mcast_groups=e['mcast_groups'])
+                    providers_table[key] = dict(description=e['description'], mcast_src_ip=e['mcast_src_ip'], upstream_if=e['upstream_if'], mcast_groups=e['mcast_groups'], status=e['status'])
                 return json.dumps(providers_table, indent=4)
+
+    # Activate a provider, enable his associated murt_entries and ¿re-evaluate do_join operations?
+    def enable_provider(self, provider_id):
+        if provider_id in self.providers:
+            provider = self.providers[provider_id]
+            current_status = provider["status"]
+            if current_status == "Enabled":
+                provider = self.retrieve_provider(provider_id) 
+            else:
+                updated_status = "Enabled"
+                upstream_if = provider['upstream_if']
+                updated_provider = dict(description=provider['description'], mcast_src_ip=provider['mcast_src_ip'], mcast_src_ip_first=provider['mcast_src_ip_first'], mcast_src_ip_last=provider['mcast_src_ip_last'], \
+                       upstream_if=upstream_if, mcast_groups=provider['mcast_groups'], status=updated_status)
+                myquery = { "_id": provider_id }
+                self.db.providers.update(myquery, updated_provider)    
+                updated_provider["_id"]=provider_id
+                self.providers[provider_id] = updated_provider
+                provider = self.retrieve_provider(provider_id)
+                new_status = "Enabled"
+                entries_to_switch = self.switch_associated_entries(upstream_if, new_status)
+        else:
+            provider = "No provider with id: " + str(provider_id)
+        provider = json.dumps(provider, indent=4)        
+        return provider
+
+    # Desactivate a provider, disable his associated murt_entries and eliminate his flows
+    def disable_provider(self, provider_id):
+        flows_to_delete = []
+        if provider_id in self.providers:
+            provider = self.providers[provider_id]
+            current_status = provider["status"]
+            if current_status == "Disabled":
+                provider = self.retrieve_provider(provider_id)
+            else:
+                updated_status = "Disabled"
+                upstream_if = provider['upstream_if']
+                updated_provider = dict(description=provider['description'], mcast_src_ip=provider['mcast_src_ip'], mcast_src_ip_first=provider['mcast_src_ip_first'], mcast_src_ip_last=provider['mcast_src_ip_last'], \
+                       upstream_if=upstream_if, mcast_groups=provider['mcast_groups'], status=updated_status)
+                myquery = { "_id": provider_id }
+                self.db.providers.update(myquery, updated_provider)    
+                updated_provider["_id"]=provider_id
+                self.providers[provider_id] = updated_provider
+                provider = self.retrieve_provider(provider_id)
+                new_status = "Disabled"
+                entries_to_switch = self.switch_associated_entries(upstream_if, new_status)
+                flows_to_delete = self.delete_flows_for_disabled(entries_to_switch)
+        else:
+            provider = "No provider with id: " + str(provider_id)
+        provider = json.dumps(provider, indent=4)           
+        return provider, flows_to_delete
+
+
+    # Modify murt_entry status associated to a murt_entry
+    def switch_associated_entries(self, upstream_if, new_status):
+        entries_to_switch = []
+        requested_if = str(upstream_if)
+        for entry in self.mcast_upstream_routing:
+            if requested_if == str(self.mcast_upstream_routing[entry]["upstream_if"]):
+                murtentry = self.mcast_upstream_routing[entry]
+                entries_to_switch.append(murtentry)
+
+                updated_entry = dict(client_ip=murtentry["client_ip"], client_ip_first=murtentry["client_ip_first"], client_ip_last=murtentry["client_ip_last"], downstream_if=murtentry["downstream_if"],\
+                                   mcast_group=murtentry["mcast_group"], mcast_group_first=murtentry["mcast_group_first"], mcast_group_last=murtentry["mcast_group_last"], \
+                                   mcast_src_ip=murtentry["mcast_src_ip"], mcast_src_ip_first=murtentry["mcast_src_ip_first"], mcast_src_ip_last=murtentry["mcast_src_ip_last"],
+                                   upstream_if=murtentry["upstream_if"], priority=murtentry["priority"], status=new_status)
+                id = murtentry["_id"]
+                myquery = { "_id": id }
+                self.db.murtentries.update(myquery, updated_entry)    
+                updated_entry["_id"]=id
+                self.mcast_upstream_routing[id] = updated_entry
+        return entries_to_switch
+
+    def delete_flows_for_disabled(self, entries_to_switch):
+        all_operations = []
+        for entry in entries_to_switch:
+            requested_id = str(entry["_id"])
+            flows_to_delete = self.find_flows(requested_id)
+            if len(flows_to_delete) != 0:
+                for operation in flows_to_delete:
+                    all_operations.append(operation)
+        return all_operations
+
 
 
 ###############################################
@@ -991,8 +1076,8 @@ class MURT:
                     error = True
         return flows_to_delete
 
-    #Delete all entries associated to a deleted provider
-    def delete_associated_entries(self, upstream_if):
+    # Find murt entries associated to a provider (same upstream_if)
+    def find_associated_entries(self, upstream_if):
         all_flows = []
         requested_if = str(upstream_if)
         for entry in self.mcast_upstream_routing:

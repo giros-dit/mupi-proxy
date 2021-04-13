@@ -43,33 +43,27 @@ class mupi_admin():
 						elif operation == 1:
 							print("Retrieve all MURT Entries present in the database")
 							response = self.get_murt_entries()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 2:
 							print("Add a new MURT Entry into to the database")
 							response = self.add_murt_entry()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 3:
 							print("Retrieve a MURT Entry with a matching ID")
 							response = json.dumps(self.get_murt_entry()[0], indent=4)	
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 4:
 							print("Update a MURT Entry with a matching ID")
 							response = self.update_murt_entry()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 5:
 							print("Delete a MURT Entry from the database")
 							response = self.delete_murt_entry()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 6:
 							print("Delete all MURT Entries from the database")
 							response = self.delete_murt_entries()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 7:
 							print("MONITOR MURT ENTRY TABLE")
 							while True:
@@ -82,52 +76,56 @@ class mupi_admin():
 					while True:
 						self.providers_menu()
 						try:
-							operation = int(input('Select your PROVIDERS operation: '))
+							operation = input('Select your PROVIDERS operation: ')
 						except ValueError:
 							print('ERROR: incorrect value')
-						if operation == 0:
+						if operation == "0":
 							break
-						elif operation == 1:
+						elif operation == "1":
 							print("Retrieve all Providers present in the database")
 							response = self.get_providers()
-							print(response)
-							wait = input('Next Operation... ')
-						elif operation == 2:
+							self.next_operation(response)
+						elif operation == "2":
 							print("Add a new Provider into to the database")
 							response = self.add_provider()
-							print(response)
-							wait = input('Next Operation... ')
-						elif operation == 3:
+							self.next_operation(response)
+						elif operation == "3":
 							print("Retrieve a Provider with a matching ID")
 							response = json.dumps(self.get_provider()[0], indent=4)	
-							print(response)
-							wait = input('Next Operation... ')
-						elif operation == 4:
+							self.next_operation(response)
+						elif operation == "4":
 							print("Update a Provider with a matching ID")
 							response = self.update_provider()
-							print(response)
-							wait = input('Next Operation... ')
-						elif operation == 5:
+							self.next_operation(response)
+						elif operation == "5":
 							print("Delete a Provider from the database")
 							response = self.delete_provider()
-							print(response)
-							wait = input('Next Operation... ')
-						elif operation == 6:
+							self.next_operation(response)
+						elif operation == "6":
 							print("Delete all Providers from the database")
 							response = self.delete_providers()
-							print(response)
-							wait = input('Next Operation... ')
-						elif operation == 7:
+							self.next_operation(response)
+						elif operation == "7":
 							print("MONITOR MURT ENTRY TABLE")
 							while True:
 								providers = self.monitor_providers()
 								self.print_providers(providers)
 								time.sleep(2)
-						elif operation == 8:
+						elif operation == "8":
 							print("Who broadcast this channel?")
 							response = self.who_has_this_channel()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
+						elif operation == "E":
+							print("Enable Provider")
+							response = self.enable_provider()
+							self.next_operation(response)
+						elif operation == "D":
+							print("Disable Provider")
+							response = self.disable_provider()
+							self.next_operation(response)
+						else:
+							print('ERROR: incorrect value')
+
 
 				#SDN CONTROLLER
 				if opcion == 3:
@@ -142,39 +140,33 @@ class mupi_admin():
 						elif operation == 1:
 							print("Retrieve all Controllers present in the database")
 							response = self.get_controllers()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 2:
 							print("Add a new Controller into to the database")
 							response = self.add_controller()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 3:
 							print("Retrieve a Controller with a matching ID")
 							response = json.dumps(self.get_controller()[0], indent=4)	
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 4:
 							print("Update a Controller with a matching ID")
 							response = self.update_controller()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 5:
 							print("Delete a Controller from the database")
 							response = self.delete_controller()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 6:
 							print("Delete all Controllers from the database")
 							response = self.delete_controllers()
-							print(response)
-							wait = input('Next Operation... ')
+							self.next_operation(response)
 						elif operation == 7:
 							print("MONITOR SDN CONTROLLERS")
 							while True:
 								controllers = self.monitor_controllers()
 								self.print_controllers(controllers)
-								time.sleep(3)
+								time.sleep(2)
 
 				#FLOWS
 				if opcion == 4:
@@ -194,9 +186,8 @@ class mupi_admin():
 								time.sleep(3)
 						elif operation == 2:
 							print("Retrieve the flows with a matching MURT Entry ID")
-							response = json.dumps(self.get_flows(), indent=4)	
-							print(response)
-							wait = input('Next Operation... ')
+							response = json.dumps(self.get_flows(), indent=4)
+							self.next_operation(response)
 				print()
 			break
 		print()
@@ -206,6 +197,13 @@ class mupi_admin():
 
 
 	#AUXILIAR FUNCTIONS
+
+	# NEXT OPERATION
+
+	def next_operation(information):
+		print(information)
+		wait = input('Next Operation... ')
+		print()
 
 	#MENUS
 	def initial_menu():
@@ -257,6 +255,8 @@ class mupi_admin():
 		print("[6] Delete all Providers from the database")
 		print("[7] Show Providers Table")
 		print("[8] Give providers for a specific channel")
+		print("[E] Enable Provider")
+		print("[D] Disable Provider")
 		print("[0] Back")
 		print()
 
@@ -390,8 +390,8 @@ class mupi_admin():
 	# Print mcast table
 	def print_murt_entries(mcast_table, extended):
 		if extended:
-			print( '{:31} {:14} {:31} {:31} {:12} {:8} {:16}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority','id') )
-			print( '{:31} {:14} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
+			print( '{:31} {:14} {:31} {:31} {:12} {:8} {:12} {:16}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'status', 'id') )
+			print( '{:31} {:14} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
 			for key in mcast_table.keys():
 				e = mcast_table[key]
 				if e['client_ip_first'] != '':
@@ -406,15 +406,15 @@ class mupi_admin():
 					mcast_src_ip = str(IPAddress(e['mcast_src_ip_first'])) + '-' + str(IPAddress(e['mcast_src_ip_last']))
 				else:
 					mcast_src_ip = ''
-				print( '{:31} {:^14} {:31} {:31} {:^12} {:^8} {}'.format(client_ip, e['downstream_if'], mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], key ))
-			print( '{:31} {:14} {:31} {:31} {:12} {:8} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '----------------') )
+				print( '{:31} {:^14} {:31} {:31} {:^12} {:^8} {:12} {:16}'.format(client_ip, e['downstream_if'], mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], e['status'], key ))
+			print( '{:31} {:14} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
 		else:
-			print( '{:25} {:14} {:25} {:25} {:12} {:8} '.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority') )
-			print( '{:25} {:14} {:25} {:25} {:12} {:8} '.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------') )
+			print( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'status') )
+			print( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------', '------------') )
 			for key in mcast_table.keys():
 				e = mcast_table[key]
-				print( '{:25} {:^14} {:25} {:25} {:^12} {:^8} '.format(e['client_ip'], e['downstream_if'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority']) )
-			print( '{:25} {:14} {:25} {:25} {:12} {:8} '.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------') )
+				print( '{:25} {:^14} {:25} {:25} {:^12} {:^8} {:12}'.format(e['client_ip'], e['downstream_if'], e['mcast_group'], e['mcast_src_ip'], e['upstream_if'], e['priority'], e['status']) )
+			print( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------', '------------') )
 			print()
 
 
@@ -526,13 +526,35 @@ class mupi_admin():
 
 	# Print providers table
 	def print_providers(provider_table):
-		print( '{:20} {:25} {:20} {:80} '.format('Description', 'mcast_src_ip', 'upstream_if', 'mcast_groups'))
-		print( '{:20} {:25} {:20} {:80} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
+		print( '{:20} {:25} {:20} {:12} {:80} '.format('Description', 'mcast_src_ip', 'upstream_if', 'status', 'mcast_groups'))
+		print( '{:20} {:25} {:20} {:12} {:80} '.format('-----------------', '-------------------', '--------------------', '------------', '-----------------') )
 		for key in provider_table.keys():
 			e = provider_table[key]
-			print( '{:20} {:25} {:20} {:80} '.format(e['description'], e['mcast_src_ip'], e['upstream_if'], str(e['mcast_groups'])) )
-		print( '{:20} {:25} {:20} {:80} '.format('-----------------', '-------------------', '--------------------', '-----------------') )
+			print( '{:20} {:25} {:20} {:12} {:80} '.format(e['description'], e['mcast_src_ip'], e['upstream_if'], e['status'] ,str(e['mcast_groups'])) )
+		print( '{:20} {:25} {:20} {:12} {:80} '.format('-----------------', '-------------------', '--------------------', '------------', '-----------------') )
 		print()
+
+	def enable_provider():
+		try:
+			provider_id = input('Provider ID: ')
+			URL = BASE_URL + "providers/enable/" + str(provider_id)
+			resp = requests.get(URL, headers = headers)
+			provider = resp.json()
+		except ValueError:
+			provider = "Incorrect ID"
+		return provider
+
+	def disable_provider():
+		try:
+			provider_id = input('Provider ID: ')
+			URL = BASE_URL + "providers/disable/" + str(provider_id)
+			resp = requests.get(URL, headers = headers)
+			provider = resp.json()
+		except ValueError:
+			provider = "Incorrect ID"
+		return provider
+
+
 
 
 	#SDN_CONTROLLERS

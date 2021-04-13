@@ -696,6 +696,39 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
 
+    # Activate a provider
+    @route('mupiproxy', BASE_URL + '/providers/enable/{provider_id}', methods=['GET'])
+    def enable_provider(self, req, provider_id, **_kwargs):
+        try:
+            enable_provider = self.mupi_proxy.murt.enable_provider(provider_id)
+            return Response(content_type='application/json', status=200, body=enable_provider)
+        except:
+            response = "[ERROR] Wrong id: " + str(provider_id)
+            body = json.dumps(response, indent=4)
+            raise Response(content_type='application/json', status=500, body=body)
+
+    # Desactivate a provider
+    @route('mupiproxy', BASE_URL + '/providers/disable/{provider_id}', methods=['GET'])
+    def disable_provider(self, req, provider_id, **_kwargs):
+        try:
+            disable_provider, flows_to_delete = self.mupi_proxy.murt.disable_provider(provider_id)
+            #Do leave operation to eliminate the flow installed in the switch
+            if flows_to_delete != -1:
+                for operation in flows_to_delete:
+                    in_port = operation["in_port"]
+                    msg = operation["msg"]
+                    provider = operation["provider"]
+                    mcast_group = operation["mcast_group"]
+                    ipversion6 = operation["ipversion6"]
+                    self.mupi_proxy.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+            return Response(content_type='application/json', status=200, body=disable_provider)
+        except:
+            response = "[ERROR] Wrong id: " + str(provider_id)
+            body = json.dumps(response, indent=4)
+            raise Response(content_type='application/json', status=500, body=body)
+
+
+
 
 ###############################################
 #SDN CONTROLLER
