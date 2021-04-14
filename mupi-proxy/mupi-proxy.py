@@ -61,13 +61,8 @@ class MupiMcastProxy (app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(MupiMcastProxy, self).__init__(*args, **kwargs)
-
         self.logger.info('--------------------------------------') 
         self.logger.info('-- MupiMcastProxy.__init__ called') 
-
-        # logger configure
-        # MupiProxyApi.set_logger(self.logger)
-
         # Variable initialization
         self.data = {}
         self.mac_to_port = {}
@@ -242,41 +237,6 @@ class MupiMcastProxy (app_manager.RyuApp):
             del self._to_hosts[dpid][mcast_group]
         self.logger.info("Flow updated")
 
-    # BORRAR O REVISAR DONDE COLOCAR, NO SE UTILIZA ACTUALMENTE
-    def get_provider(self, client_ip, mcast_group, mcast_src_ip):
-        self.clients_possible = {}
-        self.providers = []
-        db = dataset.connect('sqlite:///proxy-mcast.db')
-        table_clients = db['clients']
-
-        #Checks in the db the rows compatible with the condition and takes
-        #the one with the highest priority
-        result = db['clients'].all()
-        for res in result:
-            if(res['client'] == client_ip or res['client'] == None) and (res['group'] == mcast_group or res['group'] == None) and (res['source'] == mcast_src_ip or res['source'] == None):
-                client = table_clients.find_one(id=res['id'])
-                provider = client['provider']
-                priority = client['priority']
-                self.clients_possible.setdefault(priority, []).append(client)
-
-        # With the row chosen, takes the provider value, and does join/leave
-        #to that provider (server)
-        if self.clients_possible != {}:
-            max_key = max(self.clients_possible, key=int)
-
-            if len(self.clients_possible[max_key]) > 1:
-                for clients_max in self.clients_possible[max_key]:
-                    prov = clients_max['provider']
-                    self.providers.append(prov)
-                return self.providers
-            else:
-                client_chosen = self.clients_possible[max_key][0]
-                provider = client_chosen['provider']
-                return provider
-        else:
-            self.logger.info('Not allowed - Not registered in the db') 
-            return None
-
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
@@ -330,7 +290,6 @@ class MupiMcastProxy (app_manager.RyuApp):
                 mcast_src_ip = record.srcs[0]
             #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
             upstream_ifs, murt_entry_ids = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if and their IDs
-            prueba = self.murt.get_upstream_if_database(client_ip, mcast_group, mcast_src_ip, in_port)
             if upstream_ifs:
                 for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
                     #Requested Flow + Associated Provider
@@ -535,14 +494,7 @@ class MupiProxyApi(ControllerBase):
             #API Request
             result, flows_to_delete = self.mupi_proxy.murt.delete_murt_entry(entry_id)
             #Do leave operation to eliminate the flow installed in the switch
-            if flows_to_delete != -1:
-                for operation in flows_to_delete:
-                    in_port = operation["in_port"]
-                    msg = operation["msg"]
-                    provider = operation["provider"]
-                    mcast_group = operation["mcast_group"]
-                    ipversion6 = operation["ipversion6"]
-                    self.mupi_proxy.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+            self.perform_do_leave_operations(flows_to_delete)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -668,14 +620,7 @@ class MupiProxyApi(ControllerBase):
             #API Request
             result, flows_to_delete = self.mupi_proxy.murt.delete_provider(provider_id)
             #Do leave operation to eliminate the flow installed in the switch
-            if flows_to_delete != -1:
-                for operation in flows_to_delete:
-                    in_port = operation["in_port"]
-                    msg = operation["msg"]
-                    provider = operation["provider"]
-                    mcast_group = operation["mcast_group"]
-                    ipversion6 = operation["ipversion6"]
-                    self.mupi_proxy.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+            self.perform_do_leave_operations(flows_to_delete)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -711,16 +656,11 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers/disable/{provider_id}', methods=['GET'])
     def disable_provider(self, req, provider_id, **_kwargs):
         try:
-            disable_provider, flows_to_delete = self.mupi_proxy.murt.disable_provider(provider_id)
+            disable_provider, all_do_leave_operations, all_flows_to_takeover = self.mupi_proxy.murt.disable_provider(provider_id)
+            #Re-evalute flows associated to a disabled provider (take-over)
+            self.take_over_flows(all_flows_to_takeover, all_do_leave_operations)
             #Do leave operation to eliminate the flow installed in the switch
-            if flows_to_delete != -1:
-                for operation in flows_to_delete:
-                    in_port = operation["in_port"]
-                    msg = operation["msg"]
-                    provider = operation["provider"]
-                    mcast_group = operation["mcast_group"]
-                    ipversion6 = operation["ipversion6"]
-                    self.mupi_proxy.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+            self.perform_do_leave_operations(all_do_leave_operations)
             return Response(content_type='application/json', status=200, body=disable_provider)
         except:
             response = "[ERROR] Wrong id: " + str(provider_id)
@@ -828,3 +768,62 @@ class MupiProxyApi(ControllerBase):
             response = "[ERROR]"
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
+
+
+    # AUXILIAR FUNCTIONS 
+
+    # Eliminate flows associated to a murt_entry which has been deleted or disabled
+    def perform_do_leave_operations(self, operations):
+        if operations != -1:
+            for op in operations:
+                operation = operations[op]
+                in_port = operation["in_port"]
+                msg = operation["msg"]
+                provider = operation["provider"]
+                mcast_group = operation["mcast_group"]
+                ipversion6 = operation["ipversion6"]
+                self.mupi_proxy.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+
+    # Find new providers for a client whose flow has been disabled due to a provider disable operation
+    def take_over_flows(self, flows_to_takeover, all_do_leave_operations):
+        for key in flows_to_takeover:
+            flow = flows_to_takeover[key]
+            # Deprecated Values
+            id_flow_deleted = str(key)
+            murt_entry_id_disabled = flow["murt_entry_id"]
+            upstream_if_deleted = flow["upstream_if"]
+            # Used values to search new providers
+            client_ip = flow["client_ip"]
+            mcast_group = flow["mcast_group"]
+            mcast_src_ip = flow["mcast_src_ip"]
+            in_port = flow["downstream_if"]
+            # Searching for new providers
+            upstream_ifs, murt_entry_ids = self.mupi_proxy.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if and their IDs
+            if upstream_ifs:
+                for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
+                    #Requested Flow + Associated Provider
+                    new_flow = dict(murt_entry_id=murt_entry_id, client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
+                    #Unique ID: Flow + MurtEntry ID
+                    id_flow = str(self.mupi_proxy.murt.dict_hash(new_flow))
+
+                    if id_flow in self.mupi_proxy.murt.registered_flows.keys():
+                        print("Existing flow")
+                    else:
+                        operation_cache = all_do_leave_operations[id_flow_deleted]
+                        msg = operation_cache["msg"]
+                        ipversion6 = operation_cache["ipversion6"]
+                        #do_join operation done
+                        operation = dict(id_flow=id_flow, in_port=in_port, msg=msg, provider=provider, mcast_group=mcast_group, ipversion6=ipversion6)
+                        #Add do_join operation to operations dictionary
+                        if murt_entry_id in self.mupi_proxy.murt.flows_per_murt_entry.keys():
+                            self.mupi_proxy.murt.flows_per_murt_entry[murt_entry_id].append(operation)
+                        else:
+                            self.mupi_proxy.murt.flows_per_murt_entry[murt_entry_id] = []
+                            self.mupi_proxy.murt.flows_per_murt_entry[murt_entry_id].append(operation)
+                        #Add the new flow
+                        self.mupi_proxy.murt.registered_flows[id_flow] = new_flow
+                        #Perform Do_Join operation
+                        self.mupi_proxy.do_join(in_port, msg, provider, mcast_group, ipversion6)
+                        print("Take-Over performed")
+            else:
+                print("No Providers Available")

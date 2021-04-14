@@ -38,7 +38,6 @@ from typing import Dict, Any
 import hashlib
 from bson.son import SON
 import pprint
-from time import time
 
 MONGO_DETAILS = "mongodb://192.168.122.1:27017"
 
@@ -121,7 +120,6 @@ class MURT:
     # Upstream Interface (Query to memory table)
     def get_upstream_if(self, client_ip, mcast_group, mcast_src_ip, downstream_if):
         # Dives the mcast-proxy routing table and gets the highest priority entries that match the query
-        tiempo_inicial = time()
         self.logger.debug(f'get_upstream_if query: client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip}, downstream_if={downstream_if}')
         match_entries = {}
         upstream_ifs = []
@@ -163,43 +161,7 @@ class MURT:
                 upstream_ifs.append(e['upstream_if'])
                 murt_entry_ids.append(key)
         self.logger.debug(f'Upstream ifs selected: {upstream_ifs}')
-        tiempo_final = time()
-        tiempo_ejecucion = tiempo_final - tiempo_inicial
-        print ('El tiempo de ejecucion fue:'+ str(tiempo_ejecucion))
         return upstream_ifs, murt_entry_ids
-
-    # Database query, less efficient
-    def get_upstream_if_database(self, client_ip, mcast_group, mcast_src_ip, downstream_if):
-        self.logger.info("CONSULTA A LA BBDD")
-        tiempo_inicial = time()
-        # Dives the mcast-proxy routing table and gets the highest priority entries that match the query
-        self.logger.debug(f'get_upstream_if query: client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip}, downstream_if={downstream_if}')
-        match_entries = {}
-        upstream_ifs = []
-        client_ip_num = str(IPAddress(client_ip))
-        mcast_group_num = str(IPAddress(mcast_group))
-        downstream_if = str(downstream_if)
-        if ( mcast_src_ip != '' and mcast_src_ip != None):
-            mcast_src_ip_num = str(IPAddress(mcast_src_ip))
-            database_match = list(self.db.murtentries.aggregate([{"$match":{"$or":[{"client_ip_first":{ "$eq":''}},{"$and":[{"client_ip_first":{ "$lte": client_ip_num}},{"client_ip_last":{ "$gte": client_ip_num}}]}]}},{"$match":{"$or":[{"mcast_group_first":{ "$eq":''}},{"$and":[{"mcast_group_first":{ "$lte": mcast_group_num}},{"mcast_group_last":{ "$gte": mcast_group_num}}]}]}},{"$match":{"$or":[{"mcast_src_ip_first":{ "$eq":''}},{"$and":[{"mcast_src_ip_first":{ "$lte": mcast_src_ip_num}},{"mcast_src_ip_last":{ "$gte": mcast_src_ip_num}}]}]}},{"$match":{"$or":[{"downstream_if":{ "$eq":''}},{"downstream_if":{"$eq": downstream_if}}]}},{"$group":{"_id":"$priority", "matched_entries":{"$push":"$$ROOT"}, "count":{"$sum":1}}},{"$sort": SON([("priority", -1)])},{"$limit":1}]))
-        else:
-            database_match = list(self.db.murtentries.aggregate([{"$match":{"$or":[{"client_ip_first":{ "$eq":''}},{"$and":[{"client_ip_first":{ "$lte": client_ip_num}},{"client_ip_last":{ "$gte": client_ip_num}}]}]}},{"$match":{"$or":[{"mcast_group_first":{ "$eq":''}},{"$and":[{"mcast_group_first":{ "$lte": mcast_group_num}},{"mcast_group_last":{ "$gte": mcast_group_num}}]}]}},{"$match":{"$or":[{"downstream_if":{ "$eq":''}},{"downstream_if":{"$eq": downstream_if}}]}},{"$group":{"_id":"$priority", "matched_entries":{"$push":"$$ROOT"}, "count":{"$sum":1}}},{"$sort": SON([("priority", -1)])},{"$limit":1}]))
-        #pprint.pprint(database_match)
-        if len(database_match) > 0:    
-            result = database_match[0]["matched_entries"]
-            for i in result:
-                match_entries[i["_id"]] = i
-                upstream_ifs.append(i['upstream_if'])
-            self.logger.debug('Matching entries:')
-            self.print_mcast_table(match_entries, False)
-            self.logger.debug(f'Upstream ifs selected: {upstream_ifs}')
-            tiempo_final = time()
-            tiempo_ejecucion = tiempo_final - tiempo_inicial
-            print ('El tiempo de ejecucion fue:'+ str(tiempo_ejecucion))
-            return upstream_ifs
-        else:
-            return -1
-
 
 
 
@@ -466,7 +428,7 @@ class MURT:
         if id in self.mcast_upstream_routing:
             murtentry = self.mcast_upstream_routing[id]
             requested_id = str(id)
-            flows_to_delete = self.find_flows(id)
+            flows_to_delete = self.find_flows(id)[0]
             if len(flows_to_delete) == 0:
                 flows_to_delete = -1
             del self.mcast_upstream_routing[id]
@@ -771,8 +733,8 @@ class MURT:
                 upstream_if = provider['upstream_if']
                 updated_provider = dict(description=provider['description'], mcast_src_ip=provider['mcast_src_ip'], mcast_src_ip_first=provider['mcast_src_ip_first'], mcast_src_ip_last=provider['mcast_src_ip_last'], \
                        upstream_if=upstream_if, mcast_groups=provider['mcast_groups'], status=updated_status)
-                myquery = { "_id": provider_id }
-                self.db.providers.update(myquery, updated_provider)    
+                #myquery = { "_id": provider_id }
+                #self.db.providers.update(myquery, updated_provider)    
                 updated_provider["_id"]=provider_id
                 self.providers[provider_id] = updated_provider
                 provider = self.retrieve_provider(provider_id)
@@ -785,7 +747,8 @@ class MURT:
 
     # Desactivate a provider, disable his associated murt_entries and eliminate his flows
     def disable_provider(self, provider_id):
-        flows_to_delete = []
+        all_do_leave_operations = []
+        all_flows_to_takeover = {}
         if provider_id in self.providers:
             provider = self.providers[provider_id]
             current_status = provider["status"]
@@ -796,18 +759,18 @@ class MURT:
                 upstream_if = provider['upstream_if']
                 updated_provider = dict(description=provider['description'], mcast_src_ip=provider['mcast_src_ip'], mcast_src_ip_first=provider['mcast_src_ip_first'], mcast_src_ip_last=provider['mcast_src_ip_last'], \
                        upstream_if=upstream_if, mcast_groups=provider['mcast_groups'], status=updated_status)
-                myquery = { "_id": provider_id }
-                self.db.providers.update(myquery, updated_provider)    
+                #myquery = { "_id": provider_id }
+                #self.db.providers.update(myquery, updated_provider)    
                 updated_provider["_id"]=provider_id
                 self.providers[provider_id] = updated_provider
                 provider = self.retrieve_provider(provider_id)
                 new_status = "Disabled"
                 entries_to_switch = self.switch_associated_entries(upstream_if, new_status)
-                flows_to_delete = self.delete_flows_for_disabled(entries_to_switch)
+                all_do_leave_operations, all_flows_to_takeover = self.delete_flows_for_disabled(entries_to_switch)
         else:
             provider = "No provider with id: " + str(provider_id)
         provider = json.dumps(provider, indent=4)           
-        return provider, flows_to_delete
+        return provider, all_do_leave_operations, all_flows_to_takeover
 
 
     # Modify murt_entry status associated to a murt_entry
@@ -824,21 +787,25 @@ class MURT:
                                    mcast_src_ip=murtentry["mcast_src_ip"], mcast_src_ip_first=murtentry["mcast_src_ip_first"], mcast_src_ip_last=murtentry["mcast_src_ip_last"],
                                    upstream_if=murtentry["upstream_if"], priority=murtentry["priority"], status=new_status)
                 id = murtentry["_id"]
-                myquery = { "_id": id }
-                self.db.murtentries.update(myquery, updated_entry)    
+                #myquery = { "_id": id }
+                #self.db.murtentries.update(myquery, updated_entry)    
                 updated_entry["_id"]=id
                 self.mcast_upstream_routing[id] = updated_entry
         return entries_to_switch
 
     def delete_flows_for_disabled(self, entries_to_switch):
-        all_operations = []
+        all_do_leave_operations = {}
+        all_flows_to_takeover = {}
         for entry in entries_to_switch:
             requested_id = str(entry["_id"])
-            flows_to_delete = self.find_flows(requested_id)
+            flows_to_delete, flows_to_takeover = self.find_flows(requested_id)
             if len(flows_to_delete) != 0:
                 for operation in flows_to_delete:
-                    all_operations.append(operation)
-        return all_operations
+                    all_do_leave_operations[operation] = flows_to_delete[operation]
+            if len(flows_to_takeover) != 0:
+                for key in flows_to_takeover:
+                    all_flows_to_takeover[key] = flows_to_takeover[key]
+        return all_do_leave_operations, all_flows_to_takeover
 
 
 
@@ -1060,7 +1027,8 @@ class MURT:
 
     #Find flows for a specific murt_entry_id. Create an array with all operations to do leave
     def find_flows(self, requested_id):
-        flows_to_delete = []
+        do_leave_operation_to_perform = {}
+        flows_to_takeover = {}
         #Update flow tables
         #Registered operations for a specific murt entry ID
         if requested_id in self.flows_per_murt_entry.keys():
@@ -1068,13 +1036,14 @@ class MURT:
             for operation in do_leave_operations:
                 id_flow = operation["id_flow"]
                 if id_flow in self.registered_flows.keys():
+                    flows_to_takeover[id_flow] = self.registered_flows[id_flow]
+                    do_leave_operation_to_perform[id_flow]=operation
                     del self.registered_flows[id_flow]
-                flows_to_delete.append(operation)
                 try:
                     del self.mupi_proxy.flows_per_murt_entry[requested_id]
                 except:
                     error = True
-        return flows_to_delete
+        return do_leave_operation_to_perform, flows_to_takeover
 
     # Find murt entries associated to a provider (same upstream_if)
     def find_associated_entries(self, upstream_if):
