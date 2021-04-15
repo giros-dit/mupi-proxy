@@ -536,7 +536,7 @@ class mupi_admin():
 
 	def enable_provider():
 		try:
-			provider_id = input('Provider ID: ')
+			provider_id = input('Provider ID or Upstream IF: ')
 			URL = BASE_URL + "providers/enable/" + str(provider_id)
 			resp = requests.get(URL, headers = headers)
 			provider = resp.json()
@@ -546,7 +546,7 @@ class mupi_admin():
 
 	def disable_provider():
 		try:
-			provider_id = input('Provider ID: ')
+			provider_id = input('Provider ID or Upstream IF: ')
 			URL = BASE_URL + "providers/disable/" + str(provider_id)
 			resp = requests.get(URL, headers = headers)
 			provider = resp.json()

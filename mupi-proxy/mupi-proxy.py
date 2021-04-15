@@ -645,6 +645,9 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers/enable/{provider_id}', methods=['GET'])
     def enable_provider(self, req, provider_id, **_kwargs):
         try:
+            upstream_if = self.is_upstream_if(provider_id)
+            if upstream_if != -1:
+                provider_id = upstream_if
             enable_provider = self.mupi_proxy.murt.enable_provider(provider_id)
             return Response(content_type='application/json', status=200, body=enable_provider)
         except:
@@ -656,6 +659,9 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers/disable/{provider_id}', methods=['GET'])
     def disable_provider(self, req, provider_id, **_kwargs):
         try:
+            upstream_if = self.is_upstream_if(provider_id)
+            if upstream_if != -1:
+                provider_id = upstream_if
             disable_provider, all_do_leave_operations, all_flows_to_takeover = self.mupi_proxy.murt.disable_provider(provider_id)
             #Re-evalute flows associated to a disabled provider (take-over)
             self.take_over_flows(all_flows_to_takeover, all_do_leave_operations)
@@ -771,6 +777,21 @@ class MupiProxyApi(ControllerBase):
 
 
     # AUXILIAR FUNCTIONS 
+
+
+    # Find provider_id when admin requests a specific upstream_if
+    def is_upstream_if(self, upstream_if):
+        provider_id = -1
+        requested_upstream_if = str(upstream_if)
+        for key in self.mupi_proxy.murt.providers:
+            provider = self.mupi_proxy.murt.providers[key]
+            if requested_upstream_if == provider['upstream_if']:
+                provider_id = provider["_id"]
+                return provider_id
+        return provider_id
+
+
+
 
     # Eliminate flows associated to a murt_entry which has been deleted or disabled
     def perform_do_leave_operations(self, operations):
