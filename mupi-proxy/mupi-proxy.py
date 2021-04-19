@@ -288,8 +288,15 @@ class MupiMcastProxy (app_manager.RyuApp):
                 mcast_src_ip=None
             else:
                 mcast_src_ip = record.srcs[0]
-            #upstream_ifs = self.get_provider(client_ip, mcast_group, mcast_src_ip) # Returns the provider
+
             upstream_ifs, murt_entry_ids = self.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if and their IDs
+
+            #Load Balancing
+            param1 = record.srcs
+            param2 = record.type_
+            multicast_request_type = self.murt.multicast_request_type(param1, param2)
+            upstream_ifs, murt_entry_ids, duplicated = self.murt.check_flows(multicast_request_type, murt_entry_ids, client_ip, mcast_group, mcast_src_ip, in_port)
+
             if upstream_ifs:
                 for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
                     #Requested Flow + Associated Provider
@@ -300,38 +307,45 @@ class MupiMcastProxy (app_manager.RyuApp):
                     operation = dict(id_flow=id_flow, in_port=in_port, msg=msg, provider=provider, mcast_group=mcast_group, ipversion6=ipversion6)
 
                     if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
-                        self.logger.info("Join: " + log)
-                        #Add do_join operation to operations dictionary
-                        if murt_entry_id in self.murt.flows_per_murt_entry.keys():
-                            self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
-                        else:
-                            self.murt.flows_per_murt_entry[murt_entry_id] = []
-                            self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
-                        #Add the new flow
-                        self.murt.registered_flows[id_flow] = new_flow
-                        #Perform Do_Join operation
-                        self.do_join(in_port, msg, provider, mcast_group, ipversion6)
-                    elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
-                        self.logger.info("Leave: " + log)
                         if id_flow in self.murt.registered_flows.keys():
-                            #Registered operations for a specific murt entry ID
-                            all_operations = self.murt.flows_per_murt_entry[murt_entry_id]
-                            searched_index = -1
-                            for idx, op in enumerate(all_operations):
-                                if op['id_flow'] == id_flow:
-                                    searched_index = idx
-                            if searched_index != -1:
-                                all_operations.pop(searched_index)
-                                if len(all_operations) == 0:
-                                    #Eliminate murt entry ID if there aren't operations
-                                    del self.murt.flows_per_murt_entry[murt_entry_id]
-                                else:
-                                    #Save pending operations for a specific murt_entry_id
-                                    self.murt.flows_per_murt_entry[murt_entry_id] = all_operations
-                            del self.murt.registered_flows[id_flow]
-                        self.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+                            self.logger.info("Existing flow: " + str(new_flow))
+                        else:
+                            self.logger.info("Join: " + log)
+                            #Add do_join operation to operations dictionary
+                            if murt_entry_id in self.murt.flows_per_murt_entry.keys():
+                                self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
+                            else:
+                                self.murt.flows_per_murt_entry[murt_entry_id] = []
+                                self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
+                            #Add the new flow
+                            self.murt.registered_flows[id_flow] = new_flow
+                            #Perform Do_Join operation
+                            self.do_join(in_port, msg, provider, mcast_group, ipversion6)
+                    elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
+                        if id_flow in self.murt.registered_flows.keys():
+                            self.logger.info("Leave: " + log)
+                            if id_flow in self.murt.registered_flows.keys():
+                                #Registered operations for a specific murt entry ID
+                                all_operations = self.murt.flows_per_murt_entry[murt_entry_id]
+                                searched_index = -1
+                                for idx, op in enumerate(all_operations):
+                                    if op['id_flow'] == id_flow:
+                                        searched_index = idx
+                                if searched_index != -1:
+                                    all_operations.pop(searched_index)
+                                    if len(all_operations) == 0:
+                                        #Eliminate murt entry ID if there aren't operations
+                                        del self.murt.flows_per_murt_entry[murt_entry_id]
+                                    else:
+                                        #Save pending operations for a specific murt_entry_id
+                                        self.murt.flows_per_murt_entry[murt_entry_id] = all_operations
+                                del self.murt.registered_flows[id_flow]
+                            self.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+                        else:
+                            self.logger.info("The flow has already been deleted: " + str(new_flow))
             else: 
                 self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip})')
+
 
         elif(is_udp and (dst[:8] == '33:33:00' or dst[:8] == '01:00:5e')): #Prints when no client is listening in the multicast group
             self.logger.info(f"Multicast packet received (src={ip_in.src}, dst_ip={ip_in.dst}), but no clients listening. Discarding...")
@@ -409,6 +423,45 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
 
+    
+
+    #Show switching mode
+    @route('mupiproxy', BASE_URL + '/switching_mode', methods=['GET'])
+    def get_switching_mode(self, req, **_kwargs):
+        try:
+            switching_mode = self.mupi_proxy.murt.get_switching_mode()
+            return Response(content_type='application/json', status=200, body=switching_mode)
+        except ValueError:
+            response = "[ERROR]"
+            body = json.dumps(response, indent=4)
+            raise Response(content_type='application/json', status=500, body=body)
+
+    # Manage switching mode
+    @route('mupiproxy', BASE_URL + '/switching_mode', methods=['POST'])
+    def change_switching_mode(self, req, **_kwargs):
+        try:
+            new_mode = req.json if req.body else {}
+        except ValueError:
+            response = "[ERROR] Invalid data"
+            body = json.dumps(response, indent=4)
+            raise Response(content_type='application/json', status=400, body=body)
+        if (len(new_mode) != 1):
+            response = "[ERROR] Invalid data, one parameter is required"
+            body = json.dumps(response, indent=4)
+            return Response(content_type='application/json', status=400, body=body)
+        else:
+            try:
+                changed_mode = self.mupi_proxy.murt.change_switching_mode(new_mode)
+                if changed_mode:
+                    body = json.dumps(changed_mode, indent=4)
+                    return Response(content_type='application/json', status=200, body=body)
+                else:
+                    response = "[ERROR]"
+                    body = json.dumps(response, indent=4)
+                    return Response(content_type='application/json', status=400, body=body)
+            except Exception as e:
+                return Response(status=500)
+
 
 ###############################################
 #MURT ENTRY
@@ -453,7 +506,7 @@ class MupiProxyApi(ControllerBase):
             response = "[ERROR] Invalid data"
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
-        if (len(new_entry) != 6):
+        if (len(new_entry) != 8):
             response = "[ERROR] Invalid data, six parameters are required"
             body = json.dumps(response, indent=4)
             return Response(content_type='application/json', status=400, body=body)
@@ -820,6 +873,8 @@ class MupiProxyApi(ControllerBase):
             in_port = flow["downstream_if"]
             # Searching for new providers
             upstream_ifs, murt_entry_ids = self.mupi_proxy.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if and their IDs
+            multicast_request_type = "Join"
+            upstream_ifs, murt_entry_ids, duplicated = self.mupi_proxy.murt.check_flows(multicast_request_type, murt_entry_ids, client_ip, mcast_group, mcast_src_ip, in_port)
             if upstream_ifs:
                 for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
                     #Requested Flow + Associated Provider

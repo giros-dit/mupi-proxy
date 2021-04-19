@@ -38,6 +38,8 @@ from typing import Dict, Any
 import hashlib
 from bson.son import SON
 import pprint
+import random
+import roundrobin
 
 MONGO_DETAILS = "mongodb://192.168.122.1:27017"
 
@@ -56,6 +58,11 @@ class MURT:
         self.client = MongoClient(MONGO_DETAILS)
         self.db= self.client.mupiproxy
         self.loadFromDatabase()
+        # Load balancing
+        self.matched_flows = {}
+        self.get_roundrobin = roundrobin.basic([0,1,2])
+        #Manage switching mode: All, Random or RoundRobin. Default switching all upstream interfaces
+        self.switching_mode = "All"
 
     # Hash fucntion to generate object IDs (to avoid duplicate entries in tables)
     def dict_hash(self, dictionary: Dict[str, Any]) -> str:
@@ -150,9 +157,8 @@ class MURT:
                     if e['priority'] > max_priority:
                         max_priority = e['priority']
 
-
         self.logger.debug('Matching entries:')
-        self.print_mcast_table(match_entries, False)
+        #self.print_mcast_table(match_entries, False)
         # Return the upstream interfaces of the entries with the highest priority
         #for e in match_entries:
         for key in match_entries.keys():
@@ -162,6 +168,85 @@ class MURT:
                 murt_entry_ids.append(key)
         self.logger.debug(f'Upstream ifs selected: {upstream_ifs}')
         return upstream_ifs, murt_entry_ids
+
+    # Multicast request type: JOIN OR LEAVE
+    def multicast_request_type(self, param1, param2):
+        if((param1==[] and param2==4) or (param1!=[] and param2==3)):
+            type = "Join"
+        elif((param1==[] and param2==3) or (param1!=[] and param2==6)):
+            type = "Leave"
+        else:
+            type = "Error"
+        return type
+
+    # To avoid duplicate messages and apply load balancing for every multicast request
+    def check_flows(self, multicast_request_type, murt_entry_ids, client_ip, mcast_group, mcast_src_ip, in_port):
+        match_entries = {}
+        upstream_ifs = []
+        murt_entry_ids_checked = []
+        duplicated = False
+        if len(murt_entry_ids) > 0:   
+            if multicast_request_type == "Join":
+                for id in murt_entry_ids:
+                    entry = self.mcast_upstream_routing[id]
+                    provider = entry["upstream_if"]
+                    new_flow = dict(murt_entry_id=entry["_id"], client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
+                    id_flow = str(self.dict_hash(new_flow))
+                    if id_flow in self.matched_flows.keys():
+                        duplicated = True
+                    else:
+                        self.matched_flows[id_flow] = new_flow
+                        match_entries[id] = entry
+                        upstream_ifs.append(provider)
+                        murt_entry_ids_checked.append(id)
+                        duplicated = False
+                #Mode 1 - select an interface randomly
+                if not duplicated:
+                    if self.switching_mode == "Random":
+                        #Random Mode
+                        index = random.randint(0, len(upstream_ifs)-1)  
+                    elif self.switching_mode == "Round Robin":
+                        #Round Robin Mode
+                        index = self.get_roundrobin()
+                    else:
+                        #All Mode
+                        index = -1
+
+                    if index != -1:
+                        selected_interface = upstream_ifs[index]
+                        upstream_ifs = []
+                        upstream_ifs.append(selected_interface)
+
+                        selected_id = murt_entry_ids_checked[index]
+                        selected_entry = match_entries[selected_id]
+                        match_entries = {}
+                        match_entries[selected_id] = selected_entry
+
+                        murt_entry_ids_checked = []
+                        murt_entry_ids_checked.append(selected_id)
+            else:
+                flows_to_delete = []
+                for id in murt_entry_ids:
+                    entry = self.mcast_upstream_routing[id]
+                    provider = entry["upstream_if"]
+                    new_flow = dict(murt_entry_id=entry["_id"], client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
+                    id_flow = str(self.dict_hash(new_flow))
+
+                    if id_flow in self.matched_flows.keys():
+                        flows_to_delete.append(id_flow)
+                        duplicated = False
+                        del self.matched_flows[id_flow]
+                        if id_flow in self.registered_flows.keys():
+                            match_entries[id] = entry
+                            upstream_ifs.append(provider)
+                            murt_entry_ids_checked.append(id)             
+                    else:
+                        duplicated = True
+            if not duplicated:
+                self.logger.debug('Matching entries:')
+                self.print_mcast_table(match_entries, False)
+        return upstream_ifs, murt_entry_ids_checked, duplicated
+
 
 
 
@@ -250,11 +335,39 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry["mcast_src_ip"]} is not a valid IP address or network.')
                 return -1
+
+        # murt entry status
+        if ( entry["status"] == '' ):
+            switching_mode = 'Enabled'
+        else:
+            try:
+                status_code = entry["status"]
+                if status_code == "D" or status_code == "Disabled":
+                    status = "Disabled"
+                else:
+                    status = "Enabled"
+            except ValueError:
+                self.logger.error(f'-- ERROR: {entry["status"]} is not a murt entry status. MURT Entry Status: [E] Enabled (default) | [D] Disabled.')
+                return -1
+
+        # switching_mode
+        if ( entry["switching_mode"] == '' ):
+            switching_mode = 'All'
+        else:
+            try:
+                switching_mode_code = entry["switching_mode"]
+                if switching_mode_code == "R" or switching_mode_code == "Round Robin":
+                    switching_mode = "Round Robin"
+                else:
+                    switching_mode = "All"
+            except ValueError:
+                self.logger.error(f'-- ERROR: {entry["switching_mode"]} is not a valid switching mode. Available Modes: [A] All | [R] Round Robin.')
+                return -1
      
         new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                            mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                            mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                           upstream_if=entry["upstream_if"], priority=entry["priority"], status="Enabled")
+                           upstream_if=entry["upstream_if"], priority=entry["priority"], status=status, switching_mode=switching_mode)
 
         proposed_id = self.dict_hash(new_entry)
         if proposed_id in self.mcast_upstream_routing:
@@ -323,7 +436,7 @@ class MURT:
         new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if, \
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=entry[4], priority=entry[5], status="Enabled")
+                                   upstream_if=entry[4], priority=entry[5], status="Enabled", switching_mode="All")
 
         proposed_id = self.dict_hash(new_entry)
         if proposed_id in self.mcast_upstream_routing:
@@ -411,10 +524,28 @@ class MURT:
             except:
                 priority = murtentry["priority"]
 
+            # murt_entry status
+            try:
+                if ( entry["status"] == '' ):
+                    status = ''
+                else:
+                    switching_mode = entry["status"]
+            except:
+                switching_mode = murtentry["status"]
+
+            # switching_mode
+            try:
+                if ( entry["switching_mode"] == '' ):
+                    switching_mode = ''
+                else:
+                    switching_mode = entry["switching_mode"]
+            except:
+                switching_mode = murtentry["switching_mode"]
+
             new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                                    mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                                   upstream_if=upstream_if, priority=priority, status=murtentry["status"])
+                                   upstream_if=upstream_if, priority=priority, status=status, switching_mode=switching_mode)
          
             myquery = { "_id": id }
             self.db.murtentries.update(myquery, new_entry)    
@@ -445,6 +576,7 @@ class MURT:
     def delete_murt_entries(self):
         self.mcast_upstream_routing = {}
         self.registered_flows = {}
+        self.matched_flows = {}
         self.flows_per_murt_entry = {}
         result = self.db.murtentries.delete_many({})
         if (len(self.mcast_upstream_routing) == 0 and result.deleted_count != 0):
@@ -691,6 +823,7 @@ class MURT:
         self.providers = {}
         self.mcast_upstream_routing = {}
         self.registered_flows = {}
+        self.matched_flows = {}
         self.flows_per_murt_entry = {}
         result = self.db.providers.delete_many({})
         if (len(self.providers) == 0 and result.deleted_count != 0):
@@ -766,6 +899,8 @@ class MURT:
                 provider = self.retrieve_provider(provider_id)
                 new_status = "Disabled"
                 entries_to_switch = self.switch_associated_entries(upstream_if, new_status)
+                #Update matched_flows table
+                self.matched_flows = {}
                 all_do_leave_operations, all_flows_to_takeover = self.delete_flows_for_disabled(entries_to_switch)
         else:
             provider = "No provider with id: " + str(provider_id)
@@ -841,7 +976,6 @@ class MURT:
 
     # Add main SDN controller: adds a main SDN controller. The local SDN controller of the multicast proxy is configured as secondary controller. In this light, a hierarchical multicast proxy structure is created 
     def add_controller(self, controller) -> dict:
-
         # description
         if ( controller["description"] == '' ):
             description = 'ControllerDescription'
@@ -882,7 +1016,6 @@ class MURT:
                 self.logger.error(f'-- ERROR: {controller["ip_address"]} is not a valid IP address or network.')
                 return -1
 
-     
         new_controller = dict(description=description, openflow_version=openflow_version, tcp_port=tcp_port, ip_address=ip_address)
 
         proposed_id = self.dict_hash(new_controller)
@@ -897,7 +1030,6 @@ class MURT:
             self.controllers[controller_id] = new_controller
             controller_added = self.retrieve_controller(controller_id)
             return controller_added
-
 
     # Update main SDN controller: updates functional parameters of the controller
     def update_controller(self, id, new_data):
@@ -1012,7 +1144,6 @@ class MURT:
             self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format(str(e['client_ip']), str(e['downstream_if']), str(e['mcast_group']), str(e['mcast_src_ip']),  str(e['upstream_if'])) )
         self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )
 
-
     # Show flows for a specific murt entry id
     def print_flows_per_murt_table(self, searched_flows, id):
         self.logger.info("REAL TIME FLOWS CONFIGURED IN OVSWITCH FOR MURT ENTRY ID: " + str(id))
@@ -1023,7 +1154,6 @@ class MURT:
             e = searched_flows[key]
             self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format(str(e['client_ip']), str(e['downstream_if']), str(e['mcast_group']), str(e['mcast_src_ip']),  str(e['upstream_if'])) )
         self.logger.info( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )
-
 
     #Find flows for a specific murt_entry_id. Create an array with all operations to do leave
     def find_flows(self, requested_id):
@@ -1053,3 +1183,31 @@ class MURT:
             if requested_if == str(self.mcast_upstream_routing[entry]["upstream_if"]):
                 all_flows.append(self.mcast_upstream_routing[entry])
         return all_flows
+
+    # Show switching mode
+    def get_switching_mode(self):
+        current_mode = self.switching_mode
+        current_mode_json = {"Switching_Mode":current_mode}
+        body = json.dumps(current_mode_json)
+        return body
+
+    #Update switching mode
+    def change_switching_mode(self, new_mode):
+        # switching_mode
+        if ( new_mode["switching_mode"] == '' ):
+            switching_mode = 'All'
+        else:
+            try:
+                switching_mode_code = new_mode["switching_mode"]
+                if switching_mode_code == "R" or switching_mode_code == "Random":
+                    switching_mode = "Random"
+                elif switching_mode_code == "RR" or switching_mode_code == "Round Robin":
+                    switching_mode = "Round Robin"
+                else:
+                    switching_mode = "All"
+            except ValueError:
+                self.logger.error(f'-- ERROR: {new_mode["switching_mode"]} is not a valid switching mode. Available Modes: [A] All | [R] Random: All | [RR] Round Robin')
+                return -1
+        updated_mode = switching_mode
+        self.switching_mode = updated_mode
+        return self.switching_mode

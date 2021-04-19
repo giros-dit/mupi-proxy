@@ -123,8 +123,8 @@ ssh client6 mcjoin -i eth1 -p 1234 224.10.10.3 ff02::103     # Receives from 10.
 #VLC
 ########################################################################################################
 En el HOST añadir las rutas para multicast:
-	ip route add 224.0.0.0/4 dev sw1
-	ip -6 route add ff00::/8 dev sw1
+	ip route add 224.0.0.0/4 dev eth1
+	ip -6 route add ff00::/8 dev eth1
 
 
 
@@ -139,3 +139,19 @@ SERVER
 	vlc -vvv video_got.mp4 --ipv6 --sout udp:\[ff2e::42\] --ttl 12
 RECEIVER
 	vlc -vvv udp://@[ff2e::42]
+
+
+
+QUE INSTALAR EN LA IMAGEN DE LAS MÁQUINAS VIRTUALES
+	VLC
+	python3
+	pip
+	pip3
+	pip3 install requests
+	jq
+	sudo sed -i 's/geteuid/getppid/' /usr/bin/vlc
+	mongo
+	pymongo
+	netaddr
+	mcjoin
+	roundrobin
