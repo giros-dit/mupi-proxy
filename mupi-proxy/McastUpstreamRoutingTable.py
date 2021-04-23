@@ -115,6 +115,7 @@ class MURT:
             "upstream_if": murtentry["upstream_if"],
             "priority": murtentry["priority"],
             "status": murtentry["status"],
+            "switching_mode" : murtentry["switching_mode"],
         }
 
     def sdncontroller_helper(self, sdncontroller) -> dict:
@@ -334,7 +335,7 @@ class MURT:
                 return -1
         # murt entry status
         if ( entry["status"] == '' ):
-            switching_mode = 'Enabled'
+            status = 'Enabled'
         else:
             try:
                 status_code = entry["status"]
@@ -512,17 +513,27 @@ class MURT:
             # murt_entry status
             try:
                 if ( entry["status"] == '' ):
-                    status = ''
+                    status = 'Enabled'
                 else:
-                    switching_mode = entry["status"]
+                    status_code = entry["status"]
+                    if status_code == "D" or status_code == "Disabled":
+                        status = "Disabled"
+                    else:
+                        status = "Enabled"
             except:
-                switching_mode = murtentry["status"]
+                status = murtentry["status"]
             # switching_mode
             try:
                 if ( entry["switching_mode"] == '' ):
-                    switching_mode = ''
+                    switching_mode = 'All'
                 else:
-                    switching_mode = entry["switching_mode"]
+                    switching_mode_code = entry["switching_mode"]
+                    if switching_mode_code == "RR" or switching_mode_code == "Round Robin":
+                        switching_mode = "Round Robin"
+                    elif switching_mode_code == "R" or switching_mode_code == "Random": 
+                        switching_mode = "Random"
+                    else:
+                        switching_mode = "All"
             except:
                 switching_mode = murtentry["switching_mode"]
 
