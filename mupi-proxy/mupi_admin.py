@@ -134,6 +134,7 @@ class mupi_admin():
 						try:
 							operation = int(input('Select your SDN-CONTROLLERS operation: '))
 						except ValueError:
+							operation = -1
 							print('ERROR: incorrect value')
 						if operation == 0:
 							break
@@ -175,6 +176,7 @@ class mupi_admin():
 						try:
 							operation = int(input('Select your FLOWS operation: '))
 						except ValueError:
+							operation = -1
 							print('ERROR: incorrect value')
 						if operation == 0:
 							break
@@ -189,13 +191,14 @@ class mupi_admin():
 							response = json.dumps(self.get_flows(), indent=4)
 							self.next_operation(response)
 						elif operation == 3:
-							print("[3] Configure Switching Mode")
-							response = json.dumps(self.configure_switching_mode(), indent=4)
-							self.next_operation(response)
-						elif operation == 4:
-							print("[4] Show Switching Mode")
+							print("Show Switching Mode")
 							response = json.dumps(self.get_switching_mode(), indent=4)
 							self.next_operation(response)
+						elif operation == 4:
+							print("Configure Switching Mode")
+							response = json.dumps(self.configure_switching_mode(), indent=4)
+							self.next_operation(response)
+						
 				print()
 			break
 		print()
@@ -292,8 +295,8 @@ class mupi_admin():
 		print('Select')
 		print("[1] Retrieve all Flows installed in the switch")
 		print("[2] Retrieve all Flows for a specific Murt Entry ID")
-		print("[3] Configure Switching Mode")
-		print("[4] Show Switching Mode")
+		print("[3] Show Switching Mode")
+		print("[4] Configure Switching Mode")
 		print("[0] Back")
 		print()
 
@@ -321,8 +324,10 @@ class mupi_admin():
 				status = "Disabled"
 			else:
 				status = "Enabled"
-			switching_mode_code = input('Switching mode: [A] All (default) | [R] Round Robin: ')
+			switching_mode_code = input('Switching mode: [A] All (default) | [R] Random | [RR] Round Robin ')
 			if switching_mode_code == "R":
+				switching_mode = "Random"
+			elif switching_mode_code == "RR":
 				switching_mode = "Round Robin"
 			else:
 				switching_mode = "All"
@@ -716,7 +721,17 @@ class mupi_admin():
 		print( '{:30} {:15} {:30} {:30} {:15}'.format('-----------------------', '-------------', '-----------------------', '-----------------------', '-------------') )
 		print()
 
+	# Retrieve switching mode configure in the controller
+	def get_switching_mode():
+	 	URL = BASE_URL + "switching_mode"
+	 	try:
+	 		resp = requests.get( URL, headers = headers)
+	 		mode = resp.json()
+	 	except ValueError:
+	 		mode = "Incorrect Mode"
+	 	return mode
 
+	# Configure switching mode between: All, Random, Round Robin
 	def configure_switching_mode():
 	 	URL = BASE_URL + "switching_mode"
 	 	try:
@@ -730,16 +745,7 @@ class mupi_admin():
 	 		new_mode = {"switching_mode":switching_mode}
 	 		new_mode = json.dumps(new_mode)
 	 		resp = requests.post( URL, headers = headers, data=new_mode)
-	 		mode = json.dumps(resp.json(), indent=4)
-	 	except ValueError:
-	 		mode = "Incorrect Mode"
-	 	return mode
-
-	def get_switching_mode():
-	 	URL = BASE_URL + "switching_mode"
-	 	try:
-	 		resp = requests.get( URL, headers = headers)
-	 		mode = json.dumps(resp.json())
+	 		mode = resp.json()
 	 	except ValueError:
 	 		mode = "Incorrect Mode"
 	 	return mode

@@ -51,6 +51,23 @@ ssh client3 mcfirst -6 -I eth1 fe80::fd:ff:fe00:901 ff02::103%eth1 1234 -c 10   
 #MCJOIN
 ########################################################################################################
 
+
+First of all, you have to configure environment variable:
+
+export MONGO_DETAILS="mongodb://192.168.122.1:27017"
+
+export MONGO_DETAILS="mongodb://ip:port"
+
+Being:
+	IP: The configured IP address in mongo configuration file /etc/mongod.conf
+		net:
+		  port: 27017
+		  bindIp: 192.168.122.1
+
+Start mongo:
+	sudo systemctl start mongod
+
+
 For testing the examples, all providers (1-3) are configured to transmit all of them to these four multicast groups: 
 	- 224.10.10.0, 224.10.10.1, 224.10.10.2 and 224.10.10.3. These four groups can be aggregated in prefix 224.10.10.0/30
 	- ff02::101 ff02::102 ff02::103 ff02::104
@@ -123,8 +140,8 @@ ssh client6 mcjoin -i eth1 -p 1234 224.10.10.3 ff02::103     # Receives from 10.
 #VLC
 ########################################################################################################
 En el HOST añadir las rutas para multicast:
-	ip route add 224.0.0.0/4 dev eth1
-	ip -6 route add ff00::/8 dev eth1
+	ip route add 224.0.0.0/4 dev sw1
+	ip -6 route add ff00::/8 dev sw1
 
 
 

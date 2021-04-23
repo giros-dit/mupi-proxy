@@ -40,13 +40,12 @@ from bson.son import SON
 import pprint
 import random
 import roundrobin
-
-MONGO_DETAILS = "mongodb://192.168.122.1:27017"
-
+import os
 
 class MURT:
 
     def __init__(self, logger):
+        # Data
         self.mcast_upstream_routing = {}
         self.providers = {}
         self.controllers = {}
@@ -54,13 +53,17 @@ class MURT:
         self.registered_flows = {}
         #To manage API Operations in Switch in Real Time
         self.flows_per_murt_entry = {}
+        #Logger
         self.logger = logger
-        self.client = MongoClient(MONGO_DETAILS)
+        #Database configuration
+        self.MONGO_DETAILS = os.environ["MONGO_DETAILS"]
+        self.client = MongoClient(self.MONGO_DETAILS)
         self.db= self.client.mupiproxy
         self.loadFromDatabase()
         # Load balancing
         self.matched_flows = {}
-        self.get_roundrobin = roundrobin.basic([0,1,2])
+        self.get_roundrobin_3_interfaces = roundrobin.basic([0,1,2])
+        self.get_roundrobin_2_interfaces = roundrobin.basic([0,1])
         #Manage switching mode: All, Random or RoundRobin. Default switching all upstream interfaces
         self.switching_mode = "All"
 
@@ -103,7 +106,6 @@ class MURT:
             "status": provider["status"],
         }
 
-
     def murtentry_helper(self, murtentry) -> dict:
         return {
             "client_ip": murtentry["client_ip"],
@@ -114,7 +116,6 @@ class MURT:
             "priority": murtentry["priority"],
             "status": murtentry["status"],
         }
-
 
     def sdncontroller_helper(self, sdncontroller) -> dict:
         return {
@@ -180,42 +181,46 @@ class MURT:
         return type
 
     # To avoid duplicate messages and apply load balancing for every multicast request
-    def check_flows(self, multicast_request_type, murt_entry_ids, client_ip, mcast_group, mcast_src_ip, in_port):
+    def check_flows(self, multicast_request_type, murt_entry_ids, upstream_ifs, client_ip, mcast_group, mcast_src_ip, in_port):
         match_entries = {}
-        upstream_ifs = []
+        upstream_ifs_checked = []
         murt_entry_ids_checked = []
         duplicated = False
-        if len(murt_entry_ids) > 0:   
+        if len(murt_entry_ids) > 0:
+            # CHECK JOIN REQUEST MULTICAST
             if multicast_request_type == "Join":
-                for id in murt_entry_ids:
-                    entry = self.mcast_upstream_routing[id]
-                    provider = entry["upstream_if"]
-                    new_flow = dict(murt_entry_id=entry["_id"], client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
+                for provider, id in zip(upstream_ifs, murt_entry_ids):
+                    new_flow = dict(murt_entry_id=id, client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
                     id_flow = str(self.dict_hash(new_flow))
                     if id_flow in self.matched_flows.keys():
                         duplicated = True
                     else:
                         self.matched_flows[id_flow] = new_flow
-                        match_entries[id] = entry
-                        upstream_ifs.append(provider)
+                        match_entries[id] = self.mcast_upstream_routing[id]
+                        upstream_ifs_checked.append(provider)
                         murt_entry_ids_checked.append(id)
                         duplicated = False
-                #Mode 1 - select an interface randomly
+                # Load Balancing
                 if not duplicated:
                     if self.switching_mode == "Random":
                         #Random Mode
-                        index = random.randint(0, len(upstream_ifs)-1)  
+                        index = random.randint(0, len(upstream_ifs_checked)-1)  
                     elif self.switching_mode == "Round Robin":
-                        #Round Robin Mode
-                        index = self.get_roundrobin()
+                        #Round Robin Mode (several round-robins: 3 interfaces, 2 interfaces, 1 interface)
+                        if len(upstream_ifs_checked) == 3:
+                            index = self.get_roundrobin_3_interfaces()
+                        elif len(upstream_ifs_checked) == 2:
+                            index = self.get_roundrobin_2_interfaces()
+                        else:
+                            index = 0
                     else:
                         #All Mode
                         index = -1
 
                     if index != -1:
-                        selected_interface = upstream_ifs[index]
-                        upstream_ifs = []
-                        upstream_ifs.append(selected_interface)
+                        selected_interface = upstream_ifs_checked[index]
+                        upstream_ifs_checked = []
+                        upstream_ifs_checked.append(selected_interface)
 
                         selected_id = murt_entry_ids_checked[index]
                         selected_entry = match_entries[selected_id]
@@ -224,28 +229,26 @@ class MURT:
 
                         murt_entry_ids_checked = []
                         murt_entry_ids_checked.append(selected_id)
+            # CHECK LEAVE REQUEST MULTICAST
             else:
                 flows_to_delete = []
-                for id in murt_entry_ids:
-                    entry = self.mcast_upstream_routing[id]
-                    provider = entry["upstream_if"]
-                    new_flow = dict(murt_entry_id=entry["_id"], client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
+                for provider, id in zip(upstream_ifs, murt_entry_ids):
+                    new_flow = dict(murt_entry_id=id, client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
                     id_flow = str(self.dict_hash(new_flow))
-
                     if id_flow in self.matched_flows.keys():
                         flows_to_delete.append(id_flow)
                         duplicated = False
                         del self.matched_flows[id_flow]
                         if id_flow in self.registered_flows.keys():
-                            match_entries[id] = entry
-                            upstream_ifs.append(provider)
+                            match_entries[id] = self.mcast_upstream_routing[id]
+                            upstream_ifs_checked.append(provider)
                             murt_entry_ids_checked.append(id)             
                     else:
                         duplicated = True
             if not duplicated:
                 self.logger.debug('Matching entries:')
                 self.print_mcast_table(match_entries, False)
-        return upstream_ifs, murt_entry_ids_checked, duplicated
+        return upstream_ifs_checked, murt_entry_ids_checked, duplicated
 
 
 
@@ -256,7 +259,6 @@ class MURT:
 #                API REST OPERATIONS                  #
 #######################################################
 #######################################################
-
 
 ###############################################
 #MURT ENTRY
@@ -274,7 +276,6 @@ class MURT:
         else:
             response = "There aren't murt entries in database"
             body = json.dumps(response, indent=4)
-        #return self.mcast_upstream_routing
         return body
 
     # Show murt entry: shows a MURT entry in detail
@@ -289,7 +290,6 @@ class MURT:
 
     # Add murt entry: adds a new entry in MURT
     def add_murt_entry(self, entry) -> dict:
-
         # client_ip
         if ( entry["client_ip"] == '' ):
             client_ip = client_ip_first = client_ip_last = ''
@@ -301,7 +301,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry["client_ip"]} is not a valid IP address or network.')
                 return -1
-
         # downstream interface
         if ( entry["downstream_if"] == '' ):
             downstream_if = ''
@@ -311,7 +310,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry["downstream_if"]} is not a valid downstream interface')
                 return -1
-
         # mcast_group
         if ( entry["mcast_group"] == '' ):
             mcast_group = mcast_group_first = mcast_group_last = ''
@@ -323,7 +321,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry["mcast_group"]} is not a valid IP address or network.')
                 return -1
-
         # mcast_src_ip
         if ( entry["mcast_src_ip"] == '' ):
             mcast_src_ip = mcast_src_ip_first = mcast_src_ip_last = ''
@@ -335,7 +332,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry["mcast_src_ip"]} is not a valid IP address or network.')
                 return -1
-
         # murt entry status
         if ( entry["status"] == '' ):
             switching_mode = 'Enabled'
@@ -349,19 +345,20 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry["status"]} is not a murt entry status. MURT Entry Status: [E] Enabled (default) | [D] Disabled.')
                 return -1
-
         # switching_mode
         if ( entry["switching_mode"] == '' ):
             switching_mode = 'All'
         else:
             try:
                 switching_mode_code = entry["switching_mode"]
-                if switching_mode_code == "R" or switching_mode_code == "Round Robin":
+                if switching_mode_code == "RR" or switching_mode_code == "Round Robin":
                     switching_mode = "Round Robin"
+                elif switching_mode_code == "R" or switching_mode_code == "Random": 
+                    switching_mode = "Random"
                 else:
                     switching_mode = "All"
             except ValueError:
-                self.logger.error(f'-- ERROR: {entry["switching_mode"]} is not a valid switching mode. Available Modes: [A] All | [R] Round Robin.')
+                self.logger.error(f'-- ERROR: {entry["switching_mode"]} is not a valid switching mode. Available Modes: [A] All | [RR] Round Robin | [R] Random')
                 return -1
      
         new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
@@ -385,7 +382,6 @@ class MURT:
 
     #Upload murt entries from a configuration file
     def add_entry(self, entry):
-
         # client_ip
         if ( entry[0] == '' ):
             client_ip = client_ip_first = client_ip_last = ''
@@ -397,7 +393,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry[0]} is not a valid IP address or network.')
                 return -1
-
         # downstream interface
         if ( entry[1] == '' ):
             downstream_if = ''
@@ -407,7 +402,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry[1]} is not a valid downstream interface')
                 return -1
-
         # mcast_group
         if ( entry[2] == '' ):
             mcast_group = mcast_group_first = mcast_group_last = ''
@@ -419,7 +413,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry[2]} is not a valid IP address or network.')
                 return -1
-
         # mcast_src_ip
         if ( entry[3] == '' ):
             mcast_src_ip = mcast_src_ip_first = mcast_src_ip_last = ''
@@ -431,7 +424,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {entry[3]} is not a valid IP address or network.')
                 return -1
-
 
         new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if, \
                                    mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
@@ -449,7 +441,6 @@ class MURT:
             entry_id = str(result.inserted_id)
             self.mcast_upstream_routing[entry_id] = new_entry
             return entry_id
-
 
     # Update murt entry: updates a MURT entry, reconfiguring the switch flow tables according to the modification
     def update_murt_entry(self, id, entry):
@@ -470,7 +461,6 @@ class MURT:
                 client_ip = murtentry["client_ip"]
                 client_ip_first = murtentry["client_ip_first"]
                 client_ip_last  = murtentry["client_ip_last"]
-
             # downstream interface
             try:
                 if ( entry["downstream_if"] == '' ):
@@ -479,7 +469,6 @@ class MURT:
                     downstream_if = entry["downstream_if"]
             except:
                 downstream_if = murtentry["downstream_if"]
-
             # mcast_group
             try:
                 if ( entry["mcast_group"] == '' ):
@@ -492,7 +481,6 @@ class MURT:
                 mcast_group = murtentry["mcast_group"]
                 mcast_group_first = murtentry["mcast_group_first"]
                 mcast_group_last  = murtentry["mcast_group_last"]
-
             # mcast_src_ip
             try:
                 if ( entry["mcast_src_ip"] == '' ):
@@ -505,7 +493,6 @@ class MURT:
                 mcast_src_ip = murtentry["mcast_src_ip"]
                 mcast_src_ip_first = murtentry["mcast_src_ip_first"]
                 mcast_src_ip_last  = murtentry["mcast_src_ip_last"]
-
             # upstream interface
             try:
                 if ( entry["upstream_if"] == '' ):
@@ -514,7 +501,6 @@ class MURT:
                     upstream_if = entry["upstream_if"]
             except:
                 upstream_if = murtentry["upstream_if"]
-
             # priority
             try:
                 if ( entry["priority"] == '' ):
@@ -523,7 +509,6 @@ class MURT:
                     priority = entry["priority"]
             except:
                 priority = murtentry["priority"]
-
             # murt_entry status
             try:
                 if ( entry["status"] == '' ):
@@ -532,7 +517,6 @@ class MURT:
                     switching_mode = entry["status"]
             except:
                 switching_mode = murtentry["status"]
-
             # switching_mode
             try:
                 if ( entry["switching_mode"] == '' ):
@@ -608,8 +592,6 @@ class MURT:
                     mcast_src_ip = ''
                 self.logger.info( '{:31} {:^14} {:31} {:31} {:^12} {:^8} {:12} {16}'.format(client_ip, e['downstream_if'], mcast_group, mcast_src_ip, e['upstream_if'], e['priority'], e['status'],key ))
             self.logger.info( '{:31} {:14} {:31} {:31} {:12} {:8} {:12} {:16}'.format('-------------------------------', '--------------', '-------------------------------', '-------------------------------', '------------', '--------', '------------', '----------------') )
-
-
         else:
             self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('client_ip', 'downstream_if', 'mcast_group', 'mcast_src_ip', 'upstream_if', 'priority', 'status') )
             self.logger.info( '{:25} {:14} {:25} {:25} {:12} {:8} {:12}'.format('-----------------', '--------------', '-----------------', '-----------------', '------------', '--------', '------------') )
@@ -630,7 +612,6 @@ class MURT:
                     mcast_table[key] = dict(client_ip=e['client_ip'], downstream_if=e['downstream_if'], mcast_group=e['mcast_group'],
                                             mcast_src_ip=e['mcast_src_ip'], upstream_if=e['upstream_if'], priority=e['priority'], status=e['status'])
                 return json.dumps(mcast_table, indent=4)
-
 
 
 
@@ -660,7 +641,6 @@ class MURT:
         else:
             response = "There aren't providers in database"
             body = json.dumps(response, indent=4)
-        #return self.providers
         return body
 
     # Show content provider: shows detailed information about a content provider such as IP address, upstream interface, among others
@@ -675,7 +655,6 @@ class MURT:
 
     # Add content provider: adds an IP multicast content provider
     def add_provider(self, provider) -> dict:
-
         # description
         if ( provider["description"] == '' ):
             description = 'providerName'
@@ -685,7 +664,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {provider["description"]} is not a valid description for a content provider.')
                 return -1
-
         # mcast_src_ip
         if ( provider["mcast_src_ip"] == '' ):
             mcast_src_ip = mcast_src_ip_first = mcast_src_ip_last = ''
@@ -697,7 +675,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {provider["mcast_src_ip"]} is not a valid IP address or network.')
                 return -1
-
         # upstream interface
         if ( provider["upstream_if"] == '' ):
             upstream_if = ''
@@ -707,19 +684,15 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {provider["upstream_if"]} is not a valid upstream interface')
                 return -1
-
         # mcast_groups
         if ( provider["mcast_groups"] == '' or provider["mcast_groups"] == []):
             mcast_groups = []
         else:
             try:
                 mcast_groups = provider["mcast_groups"]
-                #mcast_group_first = str(IPAddress(IPNetwork(provider["mcast_group"]).first))
-                #mcast_group_last  = str(IPAddress(IPNetwork(provider["mcast_group"]).last))
             except ValueError:
                 self.logger.error(f'-- ERROR: {provider["mcast_groups"]} is not a valid IP address or network.')
                 return -1
-
      
         new_provider = dict(description=description, mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last, \
                            upstream_if=upstream_if, mcast_groups=mcast_groups, status="Enabled")
@@ -737,7 +710,6 @@ class MURT:
             provider_added = self.retrieve_provider(provider_id)
             return provider_added
 
-
     # Update content provider: updates functional parameters of a content provider
     def update_provider(self, id, new_data):
         # Return false if an empty request body is sent.
@@ -745,7 +717,6 @@ class MURT:
             return False
         if id in self.providers:
             provider = self.providers[id]
-
             # description
             try:
                 if ( new_data["description"] == '' ):
@@ -754,7 +725,6 @@ class MURT:
                     description = new_data["description"]
             except:
                 description = provider["description"]
-
             # mcast_src_ip
             try:
                 if ( new_data["mcast_src_ip"] == '' ):
@@ -767,7 +737,6 @@ class MURT:
                 mcast_src_ip = provider["mcast_src_ip"]
                 mcast_src_ip_first = provider["mcast_src_ip_first"]
                 mcast_src_ip_last  = provider["mcast_src_ip_last"]
-
             # upstream interface
             try:
                 if ( new_data["upstream_if"] == '' ):
@@ -776,7 +745,6 @@ class MURT:
                     upstream_if = new_data["upstream_if"]
             except:
                 upstream_if = provider["upstream_if"]
-
             # mcast_groups
             try:
                 if ( new_data["mcast_groups"] == '' or new_data["mcast_groups"] == []):
@@ -907,7 +875,6 @@ class MURT:
         provider = json.dumps(provider, indent=4)           
         return provider, all_do_leave_operations, all_flows_to_takeover
 
-
     # Modify murt_entry status associated to a murt_entry
     def switch_associated_entries(self, upstream_if, new_status):
         entries_to_switch = []
@@ -947,7 +914,6 @@ class MURT:
 ###############################################
 #SDN CONTROLLER
 ###############################################
-
     # List SDN Controllers: lists the SDN Controllers added to the multicast proxy
     def retrieve_controllers(self):
         controllers_table = []
@@ -961,7 +927,6 @@ class MURT:
         else:
             response = "There aren't controllers in database"
             body = json.dumps(response, indent=4)
-        #return self.controllers
         return body
 
     # Show main SDN controller: shows detailed information about the main SDN controller such as openflow version, TCP port, IP address, among others
@@ -985,7 +950,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {controller["description"]} is not a valid description for a controller.')
                 return -1
-
         # openflow_version
         if ( controller["openflow_version"] == '' ):
             openflow_version = 'OpenFlow13'
@@ -995,7 +959,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {controller["openflow_version"]} is not a valid OpenFlow version.')
                 return -1
-
         # tcp_port
         if ( controller["tcp_port"] == '' ):
             tcp_port = ''
@@ -1005,7 +968,6 @@ class MURT:
             except ValueError:
                 self.logger.error(f'-- ERROR: {controller["tcp_port"]} is not a valid tcp port')
                 return -1
-
         # ip_address
         if ( controller["ip_address"] == ''):
             ip_address = ''
@@ -1038,7 +1000,6 @@ class MURT:
             return False
         if id in self.controllers:
             controller = self.controllers[id]
-
             # description
             try:
                 if ( new_data["description"] == '' ):
@@ -1047,7 +1008,6 @@ class MURT:
                     description = new_data["description"]
             except:
                 description = controller["description"]
-
             # openflow_version
             try:
                 if ( new_data["openflow_version"] == '' ):
@@ -1056,7 +1016,6 @@ class MURT:
                     openflow_version = new_data["openflow_version"]
             except:
                 openflow_version = controller["mcast_src_ip"]
-
             # tcp_port
             try:
                 if ( new_data["tcp_port"] == '' ):
@@ -1065,7 +1024,6 @@ class MURT:
                     tcp_port = new_data["tcp_port"]
             except:
                 tcp_port = controller["tcp_port"]
-
             # ip_address
             try:
                 if ( new_data["ip_address"] == ''):
@@ -1187,8 +1145,8 @@ class MURT:
     # Show switching mode
     def get_switching_mode(self):
         current_mode = self.switching_mode
-        current_mode_json = {"Switching_Mode":current_mode}
-        body = json.dumps(current_mode_json)
+        body = {"Switching_Mode":current_mode}
+        body = json.dumps(body, indent=4)
         return body
 
     #Update switching mode

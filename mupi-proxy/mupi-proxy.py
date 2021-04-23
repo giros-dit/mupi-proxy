@@ -77,7 +77,7 @@ class MupiMcastProxy (app_manager.RyuApp):
         # Read config params from DEFAULT section
         cfg.CONF.register_opts([
             #cfg.StrOpt('mac_to_port', default='Not configured', help = ('A string')),
-            #cfg.StrOpt('to_hosts', default='Not configured', help = ('A string')),switch_event
+            #cfg.StrOpt('to_hosts', default='Not configured', help = ('A string')),
             cfg.IntOpt('test_param1', default='0', help = ('A integer'))])
         #self.mac_to_port = json.loads(cfg.CONF.mac_to_port)
         #self._to_hosts = json.loads(cfg.CONF.to_hosts)
@@ -295,56 +295,60 @@ class MupiMcastProxy (app_manager.RyuApp):
             param1 = record.srcs
             param2 = record.type_
             multicast_request_type = self.murt.multicast_request_type(param1, param2)
-            upstream_ifs, murt_entry_ids, duplicated = self.murt.check_flows(multicast_request_type, murt_entry_ids, client_ip, mcast_group, mcast_src_ip, in_port)
+            upstream_ifs, murt_entry_ids, duplicated = self.murt.check_flows(multicast_request_type, murt_entry_ids, upstream_ifs, client_ip, mcast_group, mcast_src_ip, in_port)
 
-            if upstream_ifs:
-                for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
-                    #Requested Flow + Associated Provider
-                    new_flow = dict(murt_entry_id=murt_entry_id, client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
-                    #Unique ID: Flow + MurtEntry ID
-                    id_flow = str(self.murt.dict_hash(new_flow))
-                    #do_join operation done
-                    operation = dict(id_flow=id_flow, in_port=in_port, msg=msg, provider=provider, mcast_group=mcast_group, ipversion6=ipversion6)
+            if not duplicated:
+                if upstream_ifs:
+                    for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
+                        #Requested Flow + Associated Provider
+                        new_flow = dict(murt_entry_id=murt_entry_id, client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
+                        #Unique ID: Flow + MurtEntry ID
+                        id_flow = str(self.murt.dict_hash(new_flow))
+                        #do_join operation done
+                        operation = dict(id_flow=id_flow, in_port=in_port, msg=msg, provider=provider, mcast_group=mcast_group, ipversion6=ipversion6)
 
-                    if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
-                        if id_flow in self.murt.registered_flows.keys():
-                            self.logger.info("Existing flow: " + str(new_flow))
-                        else:
-                            self.logger.info("Join: " + log)
-                            #Add do_join operation to operations dictionary
-                            if murt_entry_id in self.murt.flows_per_murt_entry.keys():
-                                self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
-                            else:
-                                self.murt.flows_per_murt_entry[murt_entry_id] = []
-                                self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
-                            #Add the new flow
-                            self.murt.registered_flows[id_flow] = new_flow
-                            #Perform Do_Join operation
-                            self.do_join(in_port, msg, provider, mcast_group, ipversion6)
-                    elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
-                        if id_flow in self.murt.registered_flows.keys():
-                            self.logger.info("Leave: " + log)
+                        if((record.srcs==[] and record.type_==4) or (record.srcs!=[] and record.type_==3)):
                             if id_flow in self.murt.registered_flows.keys():
-                                #Registered operations for a specific murt entry ID
-                                all_operations = self.murt.flows_per_murt_entry[murt_entry_id]
-                                searched_index = -1
-                                for idx, op in enumerate(all_operations):
-                                    if op['id_flow'] == id_flow:
-                                        searched_index = idx
-                                if searched_index != -1:
-                                    all_operations.pop(searched_index)
-                                    if len(all_operations) == 0:
-                                        #Eliminate murt entry ID if there aren't operations
-                                        del self.murt.flows_per_murt_entry[murt_entry_id]
-                                    else:
-                                        #Save pending operations for a specific murt_entry_id
-                                        self.murt.flows_per_murt_entry[murt_entry_id] = all_operations
-                                del self.murt.registered_flows[id_flow]
-                            self.do_leave(in_port, msg, provider, mcast_group, ipversion6)
-                        else:
-                            self.logger.info("The flow has already been deleted: " + str(new_flow))
-            else: 
-                self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip})')
+                                self.logger.info("Existing flow: " + str(new_flow))
+                            else:
+                                self.logger.info("Join: " + log)
+                                #Add do_join operation to operations dictionary
+                                if murt_entry_id in self.murt.flows_per_murt_entry.keys():
+                                    self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
+                                else:
+                                    self.murt.flows_per_murt_entry[murt_entry_id] = []
+                                    self.murt.flows_per_murt_entry[murt_entry_id].append(operation)
+                                #Add the new flow
+                                self.murt.registered_flows[id_flow] = new_flow
+                                #Perform Do_Join operation
+                                self.do_join(in_port, msg, provider, mcast_group, ipversion6)
+                        elif((record.srcs==[] and record.type_==3) or (record.srcs!=[] and record.type_==6)):
+                            if id_flow in self.murt.registered_flows.keys():
+                                self.logger.info("Leave: " + log)
+                                if id_flow in self.murt.registered_flows.keys():
+                                    #Registered operations for a specific murt entry ID
+                                    all_operations = self.murt.flows_per_murt_entry[murt_entry_id]
+                                    searched_index = -1
+                                    for idx, op in enumerate(all_operations):
+                                        if op['id_flow'] == id_flow:
+                                            searched_index = idx
+                                    if searched_index != -1:
+                                        all_operations.pop(searched_index)
+                                        if len(all_operations) == 0:
+                                            #Eliminate murt entry ID if there aren't operations
+                                            del self.murt.flows_per_murt_entry[murt_entry_id]
+                                        else:
+                                            #Save pending operations for a specific murt_entry_id
+                                            self.murt.flows_per_murt_entry[murt_entry_id] = all_operations
+                                    del self.murt.registered_flows[id_flow]
+                                self.do_leave(in_port, msg, provider, mcast_group, ipversion6)
+                            else:
+                                self.logger.info("The flow has already been deleted: " + str(new_flow))
+                else: 
+                    self.logger.info(f'ERROR: no provider defined for query (client_ip={client_ip}, mcast_group={mcast_group}, mcast_src_ip={mcast_src_ip})')
+            else:
+                self.logger.info("------ The multicast request has already been evaluated. Discarding...")
+
 
 
         elif(is_udp and (dst[:8] == '33:33:00' or dst[:8] == '01:00:5e')): #Prints when no client is listening in the multicast group
@@ -423,8 +427,6 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
 
-    
-
     #Show switching mode
     @route('mupiproxy', BASE_URL + '/switching_mode', methods=['GET'])
     def get_switching_mode(self, req, **_kwargs):
@@ -463,6 +465,7 @@ class MupiProxyApi(ControllerBase):
                 return Response(status=500)
 
 
+
 ###############################################
 #MURT ENTRY
 ###############################################
@@ -473,7 +476,6 @@ class MupiProxyApi(ControllerBase):
         body = self.mupi_proxy.murt.get_mcast_table(format, True)
         #table = self.mupi_proxy.murt.print_mcast_table(self.mupi_proxy.murt.mcast_upstream_routing, False)
         return Response(content_type='application/json', status=200, body=body)
-
 
     # List murt entries: lists the current entries in MURT
     @route('mupiproxy', BASE_URL + '/murtentries', methods=['GET'])
@@ -570,10 +572,10 @@ class MupiProxyApi(ControllerBase):
             raise Response(content_type='application/json', status=500, body=body)
 
 
+
 ###############################################
 #PROVIDER
 ###############################################
-
     # Get Providers for an specific channel
     @route('mupiproxy', BASE_URL + '/channel/{channel_id}', methods=['GET'])
     def who_has_a_channel(self, req, channel_id, **_kwargs):
@@ -664,7 +666,6 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
 
-   
     # Delete content provider: deletes a content provider from the multicast proxy
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['DELETE'])
     def delete_provider(self, req, provider_id, **_kwargs):
@@ -725,7 +726,6 @@ class MupiProxyApi(ControllerBase):
             response = "[ERROR] Wrong id: " + str(provider_id)
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
-
 
 
 
@@ -828,9 +828,7 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=500, body=body)
 
-
     # AUXILIAR FUNCTIONS 
-
 
     # Find provider_id when admin requests a specific upstream_if
     def is_upstream_if(self, upstream_if):
@@ -842,9 +840,6 @@ class MupiProxyApi(ControllerBase):
                 provider_id = provider["_id"]
                 return provider_id
         return provider_id
-
-
-
 
     # Eliminate flows associated to a murt_entry which has been deleted or disabled
     def perform_do_leave_operations(self, operations):
@@ -874,7 +869,7 @@ class MupiProxyApi(ControllerBase):
             # Searching for new providers
             upstream_ifs, murt_entry_ids = self.mupi_proxy.murt.get_upstream_if(client_ip, mcast_group, mcast_src_ip, in_port) # Returns the upstream if and their IDs
             multicast_request_type = "Join"
-            upstream_ifs, murt_entry_ids, duplicated = self.mupi_proxy.murt.check_flows(multicast_request_type, murt_entry_ids, client_ip, mcast_group, mcast_src_ip, in_port)
+            upstream_ifs, murt_entry_ids, duplicated = self.mupi_proxy.murt.check_flows(multicast_request_type, murt_entry_ids, upstream_ifs, client_ip, mcast_group, mcast_src_ip, in_port)
             if upstream_ifs:
                 for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
                     #Requested Flow + Associated Provider

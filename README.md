@@ -91,7 +91,29 @@ Note: you can destroy the scenario with '--destroy' option:
 
 ```sudo vnx -f mupi-proxy-test1.xml -v --destroy```
 
-5. Start mupi-proxy in controller container with:
+5. Launch Mongo DB:
+
+First of all, you have to configure environment variable:
+
+```
+export MONGO_DETAILS="mongodb://192.168.122.1:27017"
+export MONGO_DETAILS="mongodb://ip:port"
+```
+
+Being:
+	- IP: The configured IP address in mongo configuration file /etc/mongod.conf
+	```
+		net:
+		  port: 27017
+		  bindIp: 192.168.122.1
+	```
+
+Start mongo:
+```
+sudo systemctl start mongod
+```
+
+6. Start mupi-proxy in controller container with:
 
 ```
 ssh root@controller
@@ -100,7 +122,7 @@ ryu-manager ryu/flowmanager/flowmanager.py mupi-proxy/mupi-proxy.py --config-fil
 
 being *\<config-file\>* the name of the mupi-proxy configuration file (see examples under mupi-proxy/conf/ directory).
 
-6. Once the scenario is started, you can connect to:
+7. Once the scenario is started, you can connect to:
   * the providers (through ssh or directly through the console) to program them to start sending IP multicast flows. For example, the following command starts to send one ip multicast packet each three seconds to 224.100.10.10:1234 through interface eth1:
 
 ```
@@ -115,9 +137,18 @@ ssh root@client1
 mcfirst -4 -I eth1 224.100.10.10 1234 -c 10
 ```
 
-7. To inspect the status of the flow tables of the switch, you can use [FlowManager](https://github.com/martimy/flowmanager) application. Just start a web navigator and connect to:
+8. To inspect the status of the flow tables of the switch, you can use [FlowManager](https://github.com/martimy/flowmanager) application. Just start a web navigator and connect to:
 
 ```http://controller:8080/home/index.html```
+
+
+9. You can control the table status with mupi_admin.py, launching several monitors to watch murt_entry, privider and flow tables
+```
+python3 mupi_admin.py
+```
+
+In the following figure we can see a representation of the architecture of the mupi-proxy system:
+![Fig3](https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy_fig3.png)
 
 
 Basic proxy modes example configurations
@@ -132,6 +163,19 @@ For testing the examples, all providers (1-3) are configured to transmit all of 
 And to stop it:
 
 ```sudo vnx -f mupi-proxy-test1.xml -v -x stop-test```
+
+
+To use mcjoin, in every provider:
+```
+mcjoin -s -i eth1 -p 1234 -f 1000 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
+```
+
+Or if you want to use vlc-media player:
+```
+vlc -vvv video_got.mp4 --sout udp:224.10.10.1 --ttl 12
+```
+
+
 
 ### Mode1-client
 Each client is assigned to a specific provider. Clients 1/2 are assigned to provider1, 3/4 to provider2 and 5/6 to provider3. The routing tables configured are:
@@ -160,6 +204,13 @@ And you can test how the mode works with commands like:
 ssh client1 mcfirst -4 -I eth1 224.10.10.1 1234 -c 10        # Receives from 10.100.0.31
 ssh client3 mcfirst -4 -I eth1 224.10.10.1 1234 -c 10        # Receives from 10.100.0.32
 ssh client5 mcfirst -4 -I eth1 224.10.10.1 1234 -c 10        # Receives from 10.100.0.33
+```
+
+Same tests with mcjoin:
+```
+ssh client1 mcjoin -i eth1 -p 1234 224.10.10.0 ff02::101        # Receives from 10.100.0.31
+ssh client3 mcjoin -i eth1 -p 1234 224.10.10.0 ff02::101        # Receives from 10.100.0.32
+ssh client5 mcjoin -i eth1 -p 1234 224.10.10.0 ff02::101        # Receives from 10.100.0.33
 ```
 
 ### Mode2-SSM
@@ -194,6 +245,14 @@ If the source is not specified in a client request, it receives simultaneously f
 ssh client1 mcfirst -4 -I eth1 224.10.10.0 1234 -c 10    # Receives from 10.100.0.31 and .33
 ```
 
+Same tests with mcjoin:
+```
+ssh client1 mcjoin -i eth1 -p 1234 10.100.0.31,224.10.10.0 2001:db8:100::31,ff02::101     # Receives from 10.100.0.31
+ssh client2 mcjoin -i eth1 -p 1234 10.100.0.33,224.10.10.0 2001:db8:100::33,ff02::101     # Receives from 10.100.0.33 
+ssh client3 mcjoin -i eth1 -p 1234 10.100.0.32,224.10.10.0 2001:db8:100::32,ff02::101      # No data received
+
+ssh client1 mcjoin -i eth1 -p 1234 224.10.10.0 ff02::101 # Receives from 10.100.0.31 and .33 
+```
 
 ### Mode3-ASM
 In this mode, client requests are routed to providers depending on the multicast group requested (\*,G): group .11 is assigned to provider 1, .21 to provider2 and .31 to provider3. The routing tables configured are:
@@ -221,6 +280,14 @@ ssh client1 mcfirst -4 -I eth1 224.10.10.1 1234 -c 10        # Receives from 10.
 ssh client1 mcfirst -4 -I eth1 224.10.10.3 1234 -c 10        # Receives from 10.100.0.31
 ```
 
+Same tests with mcjoin:
+```
+ssh client1 mcjoin -i eth1 -p 1234 224.10.10.0 ff02::101    # Receives from 10.100.0.31
+ssh client1 mcjoin -i eth1 -p 1234 224.10.10.1 ff02::102    # Receives from 10.100.0.32
+ssh client1 mcjoin -i eth1 -p 1234 224.10.10.3 ff02::103    # Receives from 10.100.0.31 [DEFAULT]
+```
+
+
 ### Mode4-source:
 In this mode, client requests are routed to providers depending on the source IP of the multicast flow (S,\*). The routing tables configured are:
 
@@ -247,3 +314,78 @@ ssh client2 mcfirst -4 -I eth1 10.100.0.32 224.10.10.2 1234 -c 10     # Receives
 ssh client3 mcfirst -4 -I eth1 10.100.0.33 224.10.10.3 1234 -c 10     # Receives from 10.100.0.33
 ```
 
+Same tests with mcjoin:
+```
+ssh client1 mcjoin -i eth1 -p 1234 10.100.0.31,224.10.10.0 2001:db8:100::31,ff02::101     # Receives from 10.100.0.31
+ssh client2 mcjoin -i eth1 -p 1234 10.100.0.32,224.10.10.2 2001:db8:100::32,ff02::102     # Receives from 10.100.0.32
+ssh client3 mcjoin -i eth1 -p 1234 10.100.0.33,224.10.10.3 2001:db8:100::33,ff02::103     # Receives from 10.100.0.33
+```
+
+
+### Mode5-Port:
+In this mode, client requests are routed to providers depending on the downstream_if of the multicast flow. The routing tables configured are:
+
+```
+[murt]
+# Multicast upstream routing table config
+#
+# Format:    Client IP      Multicast     Multicast    Upstream  Priority
+#            Addr/Prefix    group         source IP    If Id
+#                           Addr/prefix   Addr/Prefix
+murt_entry = ,            1,           ,             ,             7,        10
+murt_entry = ,            2,           ,             ,             7,        10
+murt_entry = ,            3,           ,             ,             7,        10
+murt_entry = ,            4,           ,             ,             8,        10
+murt_entry = ,            5,           ,             ,             8,        10
+murt_entry = ,            6,           ,             ,             8,        10
+murt_entry = ,            1,           ,             ,             9,        10
+murt_entry = ,            4,           ,             ,             9,        10
+murt_entry = ,            5,           ,             ,             9,        20
+
+```
+
+For this mode, start ryu manager using this command:
+
+```start-mupi-proxy mupi-proxy/conf/mode5-port.conf```
+
+And you can test how the mode works with commands like: 
+```
+ssh client1 mcjoin -i eth1 -p 1234 224.10.10.0 ff02::101     # Receives from 10.100.0.31 y .33
+ssh client2 mcjoin -i eth1 -p 1234 224.10.10.2 ff02::102     # Receives from 10.100.0.31
+ssh client3 mcjoin -i eth1 -p 1234 224.10.10.3 ff02::103     # Receives from 10.100.0.31
+ssh client4 mcjoin -i eth1 -p 1234 224.10.10.3 ff02::103     # Receives from 10.100.0.32 y .33
+ssh client5 mcjoin -i eth1 -p 1234 224.10.10.3 ff02::103     # Receives from 10.100.0.33
+ssh client6 mcjoin -i eth1 -p 1234 224.10.10.3 ff02::103     # Receives from 10.100.0.32
+```
+
+
+### VLC:
+To receive the video broadcast by the VLC server:
+
+Configure multicast flows in host:
+```
+ip route add 224.0.0.0/4 dev sw1
+ip -6 route add ff00::/8 dev sw1
+```
+
+IPv4
+SERVER
+```
+vlc -vvv video_got.mp4 --sout udp:224.10.10.1 --ttl 12
+```
+
+RECEIVER
+```
+vlc -vvv udp://@224.10.10.1
+```
+
+IPv6
+SERVER
+```
+vlc -vvv video_got.mp4 --ipv6 --sout udp:\[ff2e::42\] --ttl 12
+```
+
+RECEIVER
+```
+vlc -vvv udp://@[ff2e::42]
+```
