@@ -148,7 +148,7 @@ python3 mupi_admin.py
 ```
 
 In the following figure we can see a representation of the architecture of the mupi-proxy system:
-![Fig3](https://github.com/giros-dit/mupi-proxy/blob/master/figures/mupi-proxy_fig3.png)
+![Fig3](https://github.com/RAULTG97/mupi-proxy/blob/master/figures/mupi-proxy_fig3.png)
 
 
 Basic proxy modes example configurations
