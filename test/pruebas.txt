@@ -56,6 +56,8 @@ First of all, you have to configure environment variable:
 
 export MONGO_DETAILS="mongodb://192.168.122.1:27017"
 
+export MONGO_DETAILS="mongodb://127.0.0.1:27017"
+
 export MONGO_DETAILS="mongodb://ip:port"
 
 Being:
@@ -75,7 +77,7 @@ For testing the examples, all providers (1-3) are configured to transmit all of 
 To start the transmission from the providers you can use this command:
 	- sudo vnx -f mupi-proxy-test1.xml -v -x start-test1-mcjoin [NOT WORK]
 
-mcjoin -s -i eth1 -p 1234 -f 1000 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
+mcjoin -s -i eth1 -p 1234 -t 12 -f 1000 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
 
 
 ------------
@@ -147,7 +149,7 @@ En el HOST añadir las rutas para multicast:
 
 IPV4
 SERVER
-	vlc -vvv video_got.mp4 --sout udp:224.10.10.1 --ttl 12
+	vlc -vvv video_got.mp4 --sout udp:224.10.10.1 --ttl 12 --loop
 RECEIVER
 	vlc -vvv udp://@224.10.10.1
 
@@ -170,5 +172,6 @@ QUE INSTALAR EN LA IMAGEN DE LAS MÁQUINAS VIRTUALES
 	mongo
 	pymongo
 	netaddr
-	mcjoin
 	roundrobin
+	apt-get install dh-autoreconf
+	mcjoin

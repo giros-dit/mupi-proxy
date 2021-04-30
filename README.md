@@ -167,7 +167,7 @@ And to stop it:
 
 To use mcjoin, in every provider:
 ```
-mcjoin -s -i eth1 -p 1234 -f 1000 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
+mcjoin -s -i eth1 -p 1234 -t 12 -f 1000 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
 ```
 
 Or if you want to use vlc-media player:

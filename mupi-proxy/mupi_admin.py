@@ -5,14 +5,17 @@ import json
 import re
 import requests
 import time
+from netaddr import *
 
 
-BASE_URL = 'http://127.0.0.1:8080/mupi-proxy/'
 headers = {'Content-Type': 'application/json','Accept': 'application/json'}
 
 
 class mupi_admin():
 
+	IP_CONTROLLER = "127.0.0.1"
+	BASE_URL = 'http://' + str(IP_CONTROLLER) + ':8080/mupi-proxy/'
+	
 	def main(self):
 		self.initial_menu()
 		while True:
@@ -198,6 +201,12 @@ class mupi_admin():
 							print("Configure Switching Mode")
 							response = json.dumps(self.configure_switching_mode(), indent=4)
 							self.next_operation(response)
+
+				# PROXY CONTROLLER
+				if opcion == 5:
+					print("Select the proxy you want to configure:")
+					response = self.configure_controller()
+					self.next_operation(response)
 						
 				print()
 			break
@@ -233,6 +242,7 @@ class mupi_admin():
 		print("[2] PROVIDER")
 		print("[3] SDN CONTROLLER")
 		print("[4] FLOWS")
+		print("[5] CHOOSE YOUR PROXY CONTROLLER")
 		print("[0] EXIT")
 		print()
 
@@ -302,7 +312,8 @@ class mupi_admin():
 
 	#MURT_ENTRY
 	def get_murt_entries():
-		URL = BASE_URL + "murtentries"
+		URL = mupi_admin.BASE_URL + "murtentries"
+		print(URL)
 		try:
 			resp = requests.get( URL, headers = headers)
 			response = json.dumps(resp.json(), indent=4)
@@ -311,7 +322,7 @@ class mupi_admin():
 		return response
 
 	def add_murt_entry():
-		URL = BASE_URL + "murtentries"
+		URL = mupi_admin.BASE_URL + "murtentries"
 		try:
 			client_ip = input('Client IP: ')
 			downstream_if = input('Downstream Interface: ')
@@ -349,7 +360,7 @@ class mupi_admin():
 	def get_murt_entry():
 		try:
 			murt_entry_id = input('MURT Entry ID: ')
-			URL = BASE_URL + "murtentries/" + str(murt_entry_id)
+			URL = mupi_admin.BASE_URL + "murtentries/" + str(murt_entry_id)
 			resp = requests.get(URL, headers = headers)
 			murt_entry = resp.json()
 		except ValueError:
@@ -366,7 +377,7 @@ class mupi_admin():
 				murt_entry = response
 			else:
 				print(response)
-				URL = BASE_URL + "murtentries/" + str(murt_entry_id)
+				URL = mupi_admin.BASE_URL + "murtentries/" + str(murt_entry_id)
 				new_entry = input('Type the field to update: {"key":"value",...}: ')
 				print(new_entry)
 				confirmation = input('Type "y" to confirm your entry: ')
@@ -383,7 +394,7 @@ class mupi_admin():
 	def delete_murt_entry():
 		try:
 			murt_entry_id = input('MURT Entry ID: ')
-			URL = BASE_URL + "murtentries/" + str(murt_entry_id)
+			URL = mupi_admin.BASE_URL + "murtentries/" + str(murt_entry_id)
 			resp = requests.delete(URL, headers = headers)
 			murt_entry = json.dumps(resp.json(), indent=4)
 		except:
@@ -391,7 +402,7 @@ class mupi_admin():
 		return murt_entry
 
 	def delete_murt_entries():
-		URL = BASE_URL + "murtentries"
+		URL = mupi_admin.BASE_URL + "murtentries"
 		try:
 			confirmation = input('Type "y" to confirm: ')
 			if confirmation == "y":
@@ -404,7 +415,7 @@ class mupi_admin():
 		return murt_entry
 
 	def monitor_murt_entries():
-		URL = BASE_URL + "murtentries-table"
+		URL = mupi_admin.BASE_URL + "murtentries-table"
 		try:
 			resp = requests.get(URL, headers = headers)
 			murt_entries = resp.json()
@@ -445,7 +456,7 @@ class mupi_admin():
 
 	#PROVIDERS
 	def get_providers():
-		URL = BASE_URL + "providers"
+		URL = mupi_admin.BASE_URL + "providers"
 		try:
 			resp = requests.get( URL, headers = headers)
 			response = json.dumps(resp.json(), indent=4)
@@ -454,7 +465,7 @@ class mupi_admin():
 		return response
 
 	def add_provider():
-		URL = BASE_URL + "providers"
+		URL = mupi_admin.BASE_URL + "providers"
 		try:
 			description = input('Provider Description: ')
 			mcast_src_ip = input('Multicast Source IP: ')
@@ -477,7 +488,7 @@ class mupi_admin():
 	def get_provider():
 		try:
 			provider_id = input('Provider ID: ')
-			URL = BASE_URL + "providers/" + str(provider_id)
+			URL = mupi_admin.BASE_URL + "providers/" + str(provider_id)
 			resp = requests.get(URL, headers = headers)
 			provider = resp.json()
 		except ValueError:
@@ -494,7 +505,7 @@ class mupi_admin():
 				updated_provider = response
 			else:		
 				print(response)
-				URL = BASE_URL + "providers/" + str(provider_id)
+				URL = mupi_admin.BASE_URL + "providers/" + str(provider_id)
 				new_provider = input('Type the field to update: {"key":"value",...}: ')
 				print(new_provider)
 				confirmation = input('Type "y" to confirm your entry: ')
@@ -510,7 +521,7 @@ class mupi_admin():
 	def delete_provider():
 		try:
 			provider_id = input('Provider ID: ')
-			URL = BASE_URL + "providers/" + str(provider_id)
+			URL = mupi_admin.BASE_URL + "providers/" + str(provider_id)
 			resp = requests.delete(URL, headers = headers)
 			provider = json.dumps(resp.json(), indent=4)
 		except:
@@ -518,7 +529,7 @@ class mupi_admin():
 		return provider
 
 	def delete_providers():
-		URL = BASE_URL + "providers"
+		URL = mupi_admin.BASE_URL + "providers"
 		try:
 			confirmation = input('Type "y" to confirm: ')
 			if confirmation == "y":
@@ -533,7 +544,7 @@ class mupi_admin():
 	def who_has_this_channel():
 		try:
 			channel = input('Write the channel ID requested: ')
-			URL = BASE_URL + "channel/" + str(channel)
+			URL = mupi_admin.BASE_URL + "channel/" + str(channel)
 			resp = requests.get(URL, headers = headers)
 			providers = json.dumps(resp.json(), indent=4)	
 		except:
@@ -541,7 +552,7 @@ class mupi_admin():
 		return providers
 
 	def monitor_providers():
-		URL = BASE_URL + "providers-table"
+		URL = mupi_admin.BASE_URL + "providers-table"
 		try:
 			resp = requests.get(URL, headers = headers)
 			murt_entries = resp.json()
@@ -562,7 +573,7 @@ class mupi_admin():
 	def enable_provider():
 		try:
 			provider_id = input('Provider ID or Upstream IF: ')
-			URL = BASE_URL + "providers/enable/" + str(provider_id)
+			URL = mupi_admin.BASE_URL + "providers/enable/" + str(provider_id)
 			resp = requests.get(URL, headers = headers)
 			provider = resp.json()
 		except ValueError:
@@ -572,7 +583,7 @@ class mupi_admin():
 	def disable_provider():
 		try:
 			provider_id = input('Provider ID or Upstream IF: ')
-			URL = BASE_URL + "providers/disable/" + str(provider_id)
+			URL = mupi_admin.BASE_URL + "providers/disable/" + str(provider_id)
 			resp = requests.get(URL, headers = headers)
 			provider = resp.json()
 		except ValueError:
@@ -584,7 +595,7 @@ class mupi_admin():
 
 	#SDN_CONTROLLERS
 	def get_controllers():
-		URL = BASE_URL + "controllers"
+		URL = mupi_admin.BASE_URL + "controllers"
 		try:
 			resp = requests.get( URL, headers = headers)
 			response = json.dumps(resp.json(), indent=4)
@@ -593,7 +604,7 @@ class mupi_admin():
 		return response
 
 	def add_controller():
-		URL = BASE_URL + "controllers"
+		URL = mupi_admin.BASE_URL + "controllers"
 		try:
 			openflow_version = input('OpenFlow Version: ')
 			tcp_port = input('TCP port: ')
@@ -616,7 +627,7 @@ class mupi_admin():
 	def get_controller():
 		try:
 			controller_id = input('SDN Controller ID: ')
-			URL = BASE_URL + "controllers/" + str(controller_id)
+			URL = mupi_admin.BASE_URL + "controllers/" + str(controller_id)
 			resp = requests.get(URL, headers = headers)
 			controller = resp.json()
 		except ValueError:
@@ -633,7 +644,7 @@ class mupi_admin():
 				controller = response
 			else:	
 				print(response)
-				URL = BASE_URL + "controllers/" + str(controller_id)
+				URL = mupi_admin.BASE_URL + "controllers/" + str(controller_id)
 				new_controller = input('Type the field to update: {"key":"value",...}: ')
 				print(new_controller)
 				confirmation = input('Type "y" to confirm your entry: ')
@@ -649,7 +660,7 @@ class mupi_admin():
 	def delete_controller():
 		try:
 			controller_id = input('SDN Controller ID: ')
-			URL = BASE_URL + "controllers/" + str(controller_id)
+			URL = mupi_admin.BASE_URL + "controllers/" + str(controller_id)
 			resp = requests.delete(URL, headers = headers)
 			controller = json.dumps(resp.json(), indent=4)
 		except:
@@ -657,7 +668,7 @@ class mupi_admin():
 		return controller
 
 	def delete_controllers():
-		URL = BASE_URL + "controllers"
+		URL = mupi_admin.BASE_URL + "controllers"
 		try:
 			confirmation = input('Type "y" to confirm: ')
 			if confirmation == "y":
@@ -670,7 +681,7 @@ class mupi_admin():
 		return controller
 
 	def monitor_controllers():
-		URL = BASE_URL + "controllers-table"
+		URL = mupi_admin.BASE_URL + "controllers-table"
 		try:
 			resp = requests.get(URL, headers = headers)
 			controllers = resp.json()
@@ -693,7 +704,7 @@ class mupi_admin():
 	def get_flows():
 		try:
 			murt_entry_id = input('MURT Entry ID: ')
-			URL = BASE_URL + "flows/" + str(murt_entry_id)
+			URL = mupi_admin.BASE_URL + "flows/" + str(murt_entry_id)
 			resp = requests.get(URL, headers = headers)
 			flows = resp.json()
 		except ValueError:
@@ -701,7 +712,7 @@ class mupi_admin():
 		return flows, murt_entry_id
 
 	def monitor_flows():
-		URL = BASE_URL + "flows"
+		URL = mupi_admin.BASE_URL + "flows"
 		try:
 			resp = requests.get(URL, headers = headers)
 			flows = resp.json()
@@ -723,7 +734,7 @@ class mupi_admin():
 
 	# Retrieve switching mode configure in the controller
 	def get_switching_mode():
-	 	URL = BASE_URL + "switching_mode"
+	 	URL = mupi_admin.BASE_URL + "switching_mode"
 	 	try:
 	 		resp = requests.get( URL, headers = headers)
 	 		mode = resp.json()
@@ -733,7 +744,7 @@ class mupi_admin():
 
 	# Configure switching mode between: All, Random, Round Robin
 	def configure_switching_mode():
-	 	URL = BASE_URL + "switching_mode"
+	 	URL = mupi_admin.BASE_URL + "switching_mode"
 	 	try:
 	 		switching_mode_code = input('Switching mode: [A] All (default) | [R] Random: All | [RR] Round Robin:  ')
 	 		if switching_mode_code == "R":
@@ -749,6 +760,25 @@ class mupi_admin():
 	 	except ValueError:
 	 		mode = "Incorrect Mode"
 	 	return mode
+
+	# CONTROLLER
+	def configure_controller():
+		try:
+			print("Current Controller: " + str(mupi_admin.IP_CONTROLLER))
+			controller_ip = input('Type the IP address of the controller: ')
+			try:
+				controller_ip = str(IPAddress(controller_ip))
+				mupi_admin.IP_CONTROLLER = controller_ip
+				mupi_admin.BASE_URL = 'http://' + str(mupi_admin.IP_CONTROLLER) + ':8080/mupi-proxy/'
+				controller = {"IP_CONTROLLER": controller_ip}
+				controller = json.dumps(controller)
+			except:
+				controller = "Incorrect IP"
+		except ValueError:
+			controller = "Incorrect IP"
+		return controller
+
+
 
 if __name__ == '__main__':
 	mupi_admin.main(mupi_admin)
