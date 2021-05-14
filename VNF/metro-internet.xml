@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+Name:        metro-internet
+
+Description: 
+
+Authors:     David Fernández (david.fernandez at upm.es)
+             Raul Torres (raul.torres.garcia at alumnos.upm.es)
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+# An online copy of the licence can be found at http://www.gnu.org/copyleft/gpl.html
+
+-->
+
+<vnx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="/usr/share/xml/vnx/vnx-2.00.xsd">
+  <global>
+    <version>2.0</version>
+    <scenario_name>mupi-proxy-test1</scenario_name>
+    <!--ssh_key>~/.ssh/id_rsa.pub</ssh_key-->
+    <ssh_key>./keys/id_rsa.pub</ssh_key>
+    <automac offset="20"/>
+    <!--vm_mgmt type="none" /!-->
+    <vm_mgmt type="private" network="10.250.0.0" mask="24" offset="0">
+       <host_mapping />
+    </vm_mgmt>
+    <vm_defaults>
+        <console id="0" display="no"/>
+        <console id="1" display="yes"/>
+    </vm_defaults>
+  </global>
+
+  <!-- NET DEFINITION -->
+  <!-- virbr0 (192.168.122.0/24) -->
+  <net name="virbr0" mode="virtual_bridge" managed="no"/>
+  <!--net name="dswA" mode="openvswitch" managed="no"/>
+  <net name="dswB" mode="openvswitch" managed="no"/-->
+  <net name="sw-mgmt" mode="openvswitch" managed="no"/>
+
+  <net name="metro" mode="openvswitch"/>
+      <!--connection name='metro-dswA' net='dswA'>
+          <vlan>
+              <tag id='10'/><tag id='20'/><tag id='30'/>
+          </vlan>
+      </connection>
+      <connection name='metro-dswB' net='dswB'>
+          <vlan>
+              <tag id='10'/><tag id='20'/><tag id='30'/>
+          </vlan>
+      </connection>
+  </net-->
+
+  <!-- Providers -->
+  <vm name="provider1" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/provider/">provider</shareddir>
+    <if id="1" net="metro">
+      <vlan><tag id='10'/></vlan>
+      <ipv4>10.2.10.1/24</ipv4>
+      <ipv6>2001:db8:100::31/64</ipv6>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+      #export DEBIAN_FRONTEND=noninteractive
+      #dhclient eth9
+      #apt-get update
+      #apt-get -y install smcroute
+      ip route add 224.0.0.0/4 dev eth1
+      ip -6 route add ff00::/8 dev eth1
+    </exec>
+    <exec seq="start-test1" type="verbatim">
+       #/root/bin/mcsender_test start 224.10.10.0 1234
+       #/root/bin/mcsender_test start 224.10.10.1 1234
+       #/root/bin/mcsender_test start 224.10.10.2 1234
+       #/root/bin/mcsender_test start 224.10.10.3 1234
+       /root/bin/msend_test start 224.10.10.0 1234 5000
+       /root/bin/msend_test start 224.10.10.1 1234 5000
+       /root/bin/msend_test start 224.10.10.2 1234 5000
+       /root/bin/msend_test start 224.10.10.3 1234 5000
+    </exec>
+    <exec seq="stop-test" type="verbatim">
+       #killall mcsender
+       killall msend
+    </exec>
+  </vm>
+
+  <vm name="provider2" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/provider/">provider</shareddir>
+    <if id="1" net="metro">
+      <vlan><tag id='20'/></vlan>
+      <ipv4>10.2.20.1/24</ipv4>
+      <ipv6>2001:db8:100::32/64</ipv6>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+      #export DEBIAN_FRONTEND=noninteractive
+      #dhclient eth9
+      #apt-get update
+      #apt-get -y install smcroute
+      ip route add 224.0.0.0/4 dev eth1
+      ip -6 route add ff00::/8 dev eth1
+    </exec>
+    <exec seq="start-test1" type="verbatim">
+       #/root/bin/mcsender_test start 224.10.10.0 1234
+       #/root/bin/mcsender_test start 224.10.10.1 1234
+       #/root/bin/mcsender_test start 224.10.10.2 1234
+       #/root/bin/mcsender_test start 224.10.10.3 1234
+       /root/bin/msend_test start 224.10.10.0 1234 5000
+       /root/bin/msend_test start 224.10.10.1 1234 5000
+       /root/bin/msend_test start 224.10.10.2 1234 5000
+       /root/bin/msend_test start 224.10.10.3 1234 5000
+    </exec>
+    <exec seq="stop-test" type="verbatim">
+       #killall mcsender
+       killall msend
+    </exec>
+  </vm>
+
+  <vm name="provider3" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/provider/">provider</shareddir>
+    <if id="1" net="metro">
+      <vlan><tag id='30'/></vlan>
+      <ipv4>10.2.30.1/24</ipv4>
+      <ipv6>2001:db8:100::33/64</ipv6>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+    <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
+    <!--route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route-->
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+      #export DEBIAN_FRONTEND=noninteractive
+      #dhclient eth9
+      #apt-get update
+      #apt-get -y install smcroute
+      ip route add 224.0.0.0/4 dev eth1
+      ip -6 route add ff00::/8 dev eth1
+    </exec>
+    <exec seq="start-test1" type="verbatim">
+       #/root/bin/mcsender_test start 224.10.10.0 1234
+       #/root/bin/mcsender_test start 224.10.10.1 1234
+       #/root/bin/mcsender_test start 224.10.10.2 1234
+       #/root/bin/mcsender_test start 224.10.10.3 1234
+       /root/bin/msend_test start 224.10.10.0 1234 5000
+       /root/bin/msend_test start 224.10.10.1 1234 5000
+       /root/bin/msend_test start 224.10.10.2 1234 5000
+       /root/bin/msend_test start 224.10.10.3 1234 5000
+    </exec>
+    <exec seq="stop-test" type="verbatim">
+       #killall mcsender
+       killall msend
+    </exec>
+  </vm>
+
+  <host>
+      <hostif net="sw-mgmt">
+          <ipv4>10.200.0.1/24</ipv4>
+      </hostif>
+  </host>
+  
+</vnx>

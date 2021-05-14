@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+~~~~~~~~~~~~~~~~~~~~
+VNX Sample scenarios
+~~~~~~~~~~~~~~~~~~~~
+
+Name:        central-office-A
+Description: 
+
+This file is part of the Virtual Networks over LinuX (VNX) Project distribution. 
+(www: http://www.dit.upm.es/vnx - e-mail: vnx@dit.upm.es) 
+
+Departamento de Ingenieria de Sistemas Telematicos (DIT)
+Universidad Politecnica de Madrid
+SPAIN
+
+-->
+
+
+<vnx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="/usr/share/xml/vnx/vnx-2.00.xsd">
+  <global>
+    <version>2.0</version>
+    <scenario_name>central-office-A</scenario_name>
+    <automac offset="4"/>
+    <vm_mgmt type="none" />
+    <!--vm_mgmt type="private" network="10.250.0.0" mask="24" offset="12">
+       <host_mapping />
+    </vm_mgmt--> 
+    <vm_defaults>
+        <console id="0" display="no"/>
+        <console id="1" display="yes"/>
+    </vm_defaults>
+  </global>
+    
+  <net name="virbr0" mode="virtual_bridge" managed="no"/>
+
+  <net name="AccessNetA" mode="openvswitch" managed="no"/>
+  <net name="ExtNetA" mode="openvswitch" managed="no"/>
+  <net name="home1Anet" mode="virtual_bridge" />
+  <net name="home2Anet" mode="virtual_bridge" />
+  <net name="dswA" mode="openvswitch" managed="no">
+      <connection name='metro-dswA' net='metro'>
+          <vlan>
+              <tag id='10'/><tag id='20'/><tag id='30'/>
+          </vlan>
+      </connection>
+  </net>
+  <net name="sw-mgmt" mode="openvswitch" managed="no"/>
+  <net name="metro" mode="openvswitch" managed="no"/>
+  <net name="Internet" mode="virtual_bridge" managed="yes"/>
+
+
+  <vm name="h11A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home1Anet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+    <!-- Get h11 IP -->
+    <exec seq="get-h11-ip" type="verbatim">
+        hostname -I | awk '{printf "%s\n", $1}{print $2}' | grep 192.168.255
+    </exec>
+    <!-- Request h11 IP -->
+    <exec seq="dhclient-h11" type="verbatim">
+        dhclient
+    </exec>
+    <!-- Get h11 IPv6 -->
+    <exec seq="get-h11-ipv6" type="verbatim">
+        ifconfig | grep 2001 | awk '{printf "%s\n", $2}{print $4}' | grep 2001
+    </exec>
+    <!-- Request h11v6 IP -->
+    <exec seq="dhclient6-h11" type="verbatim">
+        dhclient -6
+    </exec>
+  </vm>   
+
+  <vm name="h12A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home1Anet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+  </vm> 
+
+  <vm name="brg1A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home1Anet">
+    </if>
+    <if id="2" net="AccessNetA">
+      <ipv4>10.255.0.2/24</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+        service openvswitch-switch start
+        sleep 5
+        ovs-vsctl add-br br0
+        ovs-vsctl add-port br0 eth1
+        ovs-vsctl add-port br0 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=10.255.0.1
+    </exec>
+  </vm>
+
+  <vm name="h21A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home2Anet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+  </vm>   
+
+  <vm name="h22A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home2Anet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+  </vm> 
+
+  <vm name="brg2A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home2Anet">
+    </if>
+    <if id="2" net="AccessNetA">
+      <ipv4>10.255.0.4/24</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+        service openvswitch-switch start
+        sleep 5
+        ovs-vsctl add-br br0
+        ovs-vsctl add-port br0 eth1
+        ovs-vsctl add-port br0 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=10.255.0.3
+    </exec>
+  </vm>
+  
+  <vm name="r1A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="ExtNetA">
+      <ipv4>10.2.3.254/24</ipv4>
+    </if>
+    <if id="2" net="Internet">
+      <ipv4>10.2.2.1/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <forwarding type="ip" />
+    <filetree seq="on_boot" root="/usr/bin/" perms="755">/usr/bin/vnx_config_nat</filetree>
+    <exec seq="on_boot" type="verbatim">
+       /usr/bin/vnx_config_nat eth1 eth9
+    </exec>
+  </vm>
+
+  <vm name="s1A" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="Internet">
+      <ipv4>10.2.2.2/24</ipv4>
+    </if>
+    <route type="ipv4" gw="10.2.2.1">default</route>
+  </vm>
+
+  <vm name="mproxyA" type="lxc" arch="x86_64">
+    <on_boot>no</on_boot>
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <!--filesystem type="cow">/home/upm/ONOS-SDN-IP-v04/filesystems/vnx_rootfs_lxc_ubuntu64-18.04-v025-onos-1.14.0</filesystem-->
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <shareddir root="/root/mupi-proxy/">mupi-proxy/</shareddir>
+    <!--shareddir root="/root/ryu/">ryu</shareddir-->
+    <if id="1" net="ExtNetA">
+      <ipv4>10.2.3.253/24</ipv4>
+    </if>
+    <if id="2" net="dswA">
+      <vlan>
+        <tag id='10'/><tag id='20'/><tag id='30'/>
+      </vlan>
+    </if>
+    <if id="3" net="sw-mgmt">
+      <ipv4>10.200.0.2/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+
+      ip link add vxlan1 type vxlan id 11 remote 10.2.3.1 dstport 4789
+      ip link add vxlan2 type vxlan id 12 remote 10.2.3.2 dstport 4789
+      ip link set vxlan1 up
+      ip link set vxlan2 up
+      ip addr add 10.2.4.2/30 dev vxlan1
+      ip addr add 10.2.4.6/30 dev vxlan2
+
+      ip link add link eth2 name if-prov1 type vlan id 10
+      ip link add link eth2 name if-prov2 type vlan id 20
+      ip link add link eth2 name if-prov3 type vlan id 30
+      #ip addr add 10.2.10.2/24 dev if-prov1
+      #ip addr add 10.2.20.2/24 dev if-prov2
+      #ip addr add 10.2.30.2/24 dev if-prov3
+      ip link set dev if-prov1 up
+      ip link set dev if-prov2 up
+      ip link set dev if-prov3 up
+
+      ovs-vsctl add-br msw
+      ovs-vsctl add-port msw if-prov1      # port 1
+      ovs-vsctl add-port msw if-prov2      # port 2
+      ovs-vsctl add-port msw if-prov3      # port 3
+      ovs-vsctl add-port msw vxlan1        # port 4
+      ovs-vsctl add-port msw vxlan2        # port 5
+      ovs-vsctl set Bridge msw protocols=OpenFlow13
+      ovs-vsctl set-controller msw tcp:127.0.0.1:6633
+
+      ip link set dev msw up
+      ip addr add 10.2.10.2/24 dev msw
+      ip addr add 10.2.20.2/24 dev msw
+      ip addr add 10.2.30.2/24 dev msw
+
+      #ryu-manager flowmanager/flowmanager.py mupi-proxy/mupi-proxy.py --config-file mupi-proxy/conf/vcpes.conf
+      #sudo lxc-attach mproxyA -- ryu-manager /root/flowmanager/flowmanager.py /root/mupi-proxy/mupi-proxy.py --config-file /root/mupi-proxy/conf/vcpes.conf
+
+    </exec>
+  </vm>
+
+  <!-- Clients -->
+  <vm name="client1A" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <!--shareddir root="/root/client/">client</shareddir-->
+    <if id="1" net="ExtNetA">
+      <ipv4>10.2.3.201/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <!--route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route-->
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+
+      # Add IP routes to mcast sources through eth1 interface
+      # If not added, traffic is discarded by Linux rp filters
+      ip route add 10.2.10.0/24 dev eth1
+      ip route add 10.2.20.0/24 dev eth1
+      ip route add 10.2.30.0/24 dev eth1
+      # Alternatively, rp filters can be disabled
+      #echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter
+      #echo 0 > /proc/sys/net/ipv4/conf/eth1/rp_filter
+
+    </exec>
+  </vm>
+
+  <vm name="client2A" type="lxc" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <shareddir root="/root/bin/">conf/bin/</shareddir>
+    <!--shareddir root="/root/client/">client</shareddir-->
+    <if id="1" net="ExtNetA">
+      <ipv4>10.2.3.202/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <!--route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route-->
+    <filetree seq="on_boot" root="/tmp/">conf/hosts</filetree>
+    <exec seq="on_boot" type="verbatim">
+      cat /tmp/hosts >> /etc/hosts
+      rm /tmp/hosts
+
+      # Add IP routes to mcast sources through eth1 interface
+      # If not added, traffic is discarded by Linux rp filters
+      ip route add 10.2.10.0/24 dev eth1
+      ip route add 10.2.20.0/24 dev eth1
+      ip route add 10.2.30.0/24 dev eth1
+      # Alternatively, rp filters can be disabled
+      #echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter
+      #echo 0 > /proc/sys/net/ipv4/conf/eth1/rp_filter
+
+    </exec>
+  </vm>
+
+  <host>
+      <hostif net="home1Anet">
+          <ipv4>10.100.0.25/24</ipv4>
+          <ipv6>2001:db8:100::25/64</ipv6>
+      </hostif>
+      
+      <!--
+      <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+      <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
+      -->
+  </host>
+
+</vnx>

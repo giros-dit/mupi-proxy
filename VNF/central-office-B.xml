@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+~~~~~~~~~~~~~~~~~~~~
+VNX Sample scenarios
+~~~~~~~~~~~~~~~~~~~~
+
+Name:        central-office-B
+Description: 
+
+This file is part of the Virtual Networks over LinuX (VNX) Project distribution. 
+(www: http://www.dit.upm.es/vnx - e-mail: vnx@dit.upm.es) 
+
+Departamento de Ingenieria de Sistemas Telematicos (DIT)
+Universidad Politecnica de Madrid
+SPAIN
+
+-->
+
+
+<vnx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="/usr/share/xml/vnx/vnx-2.00.xsd">
+  <global>
+    <version>2.0</version>
+    <scenario_name>central-office-B</scenario_name>
+    <automac offset="5"/>
+    <vm_mgmt type="none" />
+    <!--vm_mgmt type="private" network="10.250.0.0" mask="24" offset="12">
+       <host_mapping />
+    </vm_mgmt--> 
+    <vm_defaults>
+        <console id="0" display="no"/>
+        <console id="1" display="yes"/>
+    </vm_defaults>
+  </global>
+    
+  <net name="virbr0" mode="virtual_bridge" managed="no"/>
+
+  <net name="AccessNetB" mode="openvswitch" managed="no"/>
+  <net name="ExtNetB" mode="openvswitch" managed="no"/>
+  <net name="home1Bnet" mode="virtual_bridge" />
+  <net name="home2Bnet" mode="virtual_bridge" />
+  <net name="dswB" mode="openvswitch" managed="no">
+      <connection name='metro-dswB' net='metro'>
+          <vlan>
+              <tag id='10'/><tag id='20'/><tag id='30'/>
+          </vlan>
+      </connection>
+  </net>
+  <net name="sw-mgmt" mode="openvswitch" managed="no"/>
+  <net name="metro" mode="openvswitch" managed="no"/>
+  <net name="Internet" mode="virtual_bridge" managed="yes"/>
+
+  <vm name="h11B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home1Bnet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+  </vm>   
+  <vm name="h12B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home1Bnet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+  </vm> 
+  <vm name="brg1B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home1Bnet">
+    </if>
+    <if id="2" net="AccessNetB">
+      <ipv4>10.255.0.6/24</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+        service openvswitch-switch start
+        sleep 5
+        ovs-vsctl add-br br0
+        ovs-vsctl add-port br0 eth1
+        ovs-vsctl add-port br0 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=10.255.0.5
+    </exec>
+  </vm>
+  <vm name="h21B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home2Bnet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+  </vm>   
+  <vm name="h22B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home2Bnet">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+       # Change MgmtNet and TunnNet interfaces MTU
+       ifconfig eth1 mtu 1400
+       sed -i -e '/iface eth1 inet static/a \   mtu 1400' /etc/network/interfaces
+    </exec>
+  </vm> 
+  <vm name="brg2B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="home2Bnet">
+    </if>
+    <if id="2" net="AccessNetB">
+      <ipv4>10.255.0.8/24</ipv4>
+    </if>
+    <exec seq="on_boot" type="verbatim">
+        service openvswitch-switch start
+        sleep 5
+        ovs-vsctl add-br br0
+        ovs-vsctl add-port br0 eth1
+        ovs-vsctl add-port br0 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=10.255.0.7
+    </exec>
+  </vm>
+  
+  <vm name="r1B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="ExtNetB">
+      <ipv4>10.2.5.254/24</ipv4>
+    </if>
+    <if id="2" net="Internet">
+      <ipv4>10.2.2.1/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+    <forwarding type="ip" />
+    <filetree seq="on_boot" root="/usr/bin/" perms="755">/usr/bin/vnx_config_nat</filetree>
+    <exec seq="on_boot" type="verbatim">
+       /usr/bin/vnx_config_nat eth1 eth9
+    </exec>
+  </vm>
+
+  <vm name="s1B" type="lxc" exec_mode="lxc-attach" arch="x86_64">
+    <filesystem type="cow">filesystems/rootfs_lxc_ubuntu64-vnxlab</filesystem>
+    <if id="1" net="Internet">
+      <ipv4>10.2.2.2/24</ipv4>
+    </if>
+    <route type="ipv4" gw="10.2.2.1">default</route>
+  </vm>
+
+  <host>
+      <hostif net="home1Bnet">
+          <ipv4>10.100.0.55/24</ipv4>
+          <ipv6>2001:db8:100::55/64</ipv6>
+      </hostif>
+      
+      <!--
+      <route type="ipv4" gw="10.100.0.1">10.100.0.0/16</route>
+      <route type="ipv6" gw="2001:db8:100::1">2001:db8::/32</route>
+      -->
+  </host>
+
+</vnx>

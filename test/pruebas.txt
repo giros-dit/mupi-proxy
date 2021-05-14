@@ -79,6 +79,8 @@ To start the transmission from the providers you can use this command:
 
 mcjoin -s -i eth1 -p 1234 -t 12 -f 1000 224.10.10.0 224.10.10.1 224.10.10.2 224.10.10.3 ff02::101 ff02::102 ff02::103 ff02::104
 
+mcjoin -s -i eth1 -p 1234 -t 12 -f 2000 224.10.10.0 ff02::101
+
 
 ------------
 Mode1-client
