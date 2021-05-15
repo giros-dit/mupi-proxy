@@ -106,6 +106,22 @@ class MupiMcastProxy (app_manager.RyuApp):
         self.logger.info('--------------------------------------') 
         self.murt.print_mcast_table(self.murt.mcast_upstream_routing, False)
 
+        # Create and configure interfaces
+        # by reading interface lines from config file
+        interface_group = cfg.oslo_config.cfg.OptGroup(name='interfaces')
+        interface_opts= [ cfg.MultiStrOpt('interface', default='', help='Interface switch type') ]
+        cfg.CONF.register_group(interface_group)
+        cfg.CONF.register_opts(interface_opts, group=interface_group)
+        interface_cfg = cfg.CONF.interfaces.interface
+        for l in interface_cfg:
+            f = l.split(',')
+            e = [ int(f[0].strip()), f[1].strip()]
+            id = self.murt.add_interface(e)
+        self.logger.info('--------------------------------------') 
+        self.logger.info('OVS Interfaces') 
+        self.logger.info('--------------------------------------') 
+        self.logger.info(json.dumps(self.murt.interfaces, indent=4))
+
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):

@@ -105,6 +105,21 @@ class MupiMcastProxy (app_manager.RyuApp):
                 self.logger.debug('Added entry {}'.format(id))
         self.logger.info('--------------------------------------') 
         self.murt.print_mcast_table(self.murt.mcast_upstream_routing, False)
+        # Create and configure interfaces
+        # by reading interface lines from config file
+        interface_group = cfg.oslo_config.cfg.OptGroup(name='interfaces')
+        interface_opts= [ cfg.MultiStrOpt('interface', default='', help='Interface switch type') ]
+        cfg.CONF.register_group(interface_group)
+        cfg.CONF.register_opts(interface_opts, group=interface_group)
+        interface_cfg = cfg.CONF.interfaces.interface
+        for l in interface_cfg:
+            f = l.split(',')
+            e = [ int(f[0].strip()), f[1].strip()]
+            id = self.murt.add_interface(e)
+        self.logger.info('--------------------------------------') 
+        self.logger.info('OVS Interfaces') 
+        self.logger.info('--------------------------------------') 
+        self.logger.info(json.dumps(self.murt.interfaces, indent=4))
 
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -291,7 +306,7 @@ class MupiMcastProxy (app_manager.RyuApp):
 
         #Multicast Request
         if(mcast_in):
-            if str(in_port) == '1' or str(in_port) == '2' or str(in_port) == '3':
+            if in_port in self.murt.upstream_ifs:
                 self.logger.info("------ Loop...")
             else:
                 record = mcast_in.records[0]
@@ -372,8 +387,8 @@ class MupiMcastProxy (app_manager.RyuApp):
             self.logger.info(f"Multicast packet received (src={ip_in.src}, dst_ip={ip_in.dst}), but no clients listening. Discarding...")
 
         else: #Normal switch - Example simple_switch_13.py
-            if str(in_port) == '1' or str(in_port) == '2' or str(in_port) == '3':
-                self.logger.info("------ Loop Discard...")
+            if in_port in self.murt.upstream_ifs:
+                self.logger.info("------ Loop...")
             else:
                 self.logger.info("No ICMPv6-MLDv2, No IGMPv3 ---> NORMAL SWITCH")
                 #learn a mac address to avoid FLOOD next time.

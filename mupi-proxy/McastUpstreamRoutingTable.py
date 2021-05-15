@@ -66,6 +66,8 @@ class MURT:
         self.get_roundrobin_2_interfaces = roundrobin.basic([0,1])
         #Manage switching mode: All, Random or RoundRobin. Default switching all upstream interfaces
         self.switching_mode = "All"
+        self.interfaces = {}
+        self.upstream_ifs = []
 
     # Hash fucntion to generate object IDs (to avoid duplicate entries in tables)
     def dict_hash(self, dictionary: Dict[str, Any]) -> str:
@@ -1180,3 +1182,29 @@ class MURT:
         updated_mode = switching_mode
         self.switching_mode = updated_mode
         return self.switching_mode
+
+    #Upload interfaces from a configuration file
+    def add_interface(self, interface):
+        # interface id
+        if ( interface[0] == '' ):
+            interface_id = -1
+        else:
+            try:
+                interface_id = int(interface[0])
+            except ValueError:
+                self.logger.error(f'-- ERROR: {interface[0]} interface_id')
+                return -1
+        # interface type
+        if ( interface[1] == '' ):
+            interface_type = 'Error'
+        else:
+            try:
+                interface_type = str(interface[1])
+            except ValueError:
+                self.logger.error(f'-- ERROR: {interface[1]} is not a valid interface type')
+                return -1
+        new_interface = dict(type=interface_type)
+        self.interfaces[interface_id] = new_interface
+        if interface_type == "Provider":
+            self.upstream_ifs.append(interface_id)
+        return interface_id
