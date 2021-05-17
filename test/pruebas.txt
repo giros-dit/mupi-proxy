@@ -69,6 +69,14 @@ Being:
 Start mongo:
 	sudo systemctl start mongod
 
+Launch Controller:
+
+	Development Scenario
+		ryu-manager ryu/flowmanager/flowmanager.py mupi-proxy/mupi-proxy.py --config-file mupi-proxy/conf/<config-file> --wsapi-host 10.250.0.2
+
+	Residential Scenario
+		ryu-manager /root/flowmanager/flowmanager.py /root/mupi-proxy/mupi-proxy.py --config-file /root/mupi-proxy/conf/vcpes.conf --wsapi-host 172.17.0.6
+
 
 For testing the examples, all providers (1-3) are configured to transmit all of them to these four multicast groups: 
 	- 224.10.10.0, 224.10.10.1, 224.10.10.2 and 224.10.10.3. These four groups can be aggregated in prefix 224.10.10.0/30

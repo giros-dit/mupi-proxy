@@ -120,6 +120,21 @@ class MupiMcastProxy (app_manager.RyuApp):
         self.logger.info('OVS Interfaces') 
         self.logger.info('--------------------------------------') 
         self.logger.info(json.dumps(self.murt.interfaces, indent=4))
+        # Create and configure providers
+        # by reading interface lines from config file
+        provider_group = cfg.oslo_config.cfg.OptGroup(name='providers')
+        provider_opts= [ cfg.MultiStrOpt('provider', default='', help='Providers data') ]
+        cfg.CONF.register_group(provider_group)
+        cfg.CONF.register_opts(provider_opts, group=provider_group)
+        provider_cfg = cfg.CONF.providers.provider
+        for l in provider_cfg:
+            f = l.split(',')
+            e = [ f[0].strip(), f[1].strip(), int(f[2].strip()), f[3].strip()]
+            id = self.murt.format_provider(e)
+        self.logger.info('--------------------------------------') 
+        self.logger.info('Providers') 
+        self.logger.info('--------------------------------------') 
+        self.murt.print_provider_table(self.murt.providers)
 
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -252,17 +267,6 @@ class MupiMcastProxy (app_manager.RyuApp):
             del self._to_hosts[dpid][mcast_group]
         self.logger.info("Flow updated")
 
-    # Find provider_id when admin requests a specific upstream_if
-    def is_upstream_if(self, upstream_if):
-        provider_id = -1
-        requested_upstream_if = str(upstream_if)
-        for key in self.murt.providers:
-            provider = self.murt.providers[key]
-            if requested_upstream_if == provider['upstream_if']:
-                provider_id = provider["_id"]
-                return provider_id
-        return provider_id
-
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
@@ -307,7 +311,7 @@ class MupiMcastProxy (app_manager.RyuApp):
         #Multicast Request
         if(mcast_in):
             if in_port in self.murt.upstream_ifs:
-                self.logger.info("------ Loop...")
+                self.logger.info("------ Loop Multicast Request...")
             else:
                 record = mcast_in.records[0]
                 client_ip = ip_in.src
@@ -388,7 +392,7 @@ class MupiMcastProxy (app_manager.RyuApp):
 
         else: #Normal switch - Example simple_switch_13.py
             if in_port in self.murt.upstream_ifs:
-                self.logger.info("------ Loop...")
+                self.logger.info("------ Loop Normal Switch...")
             else:
                 self.logger.info("No ICMPv6-MLDv2, No IGMPv3 ---> NORMAL SWITCH")
                 #learn a mac address to avoid FLOOD next time.
@@ -582,9 +586,11 @@ class MupiProxyApi(ControllerBase):
         try:
             requested_id = str(entry_id)
             #API Request
-            result, flows_to_delete = self.mupi_proxy.murt.delete_murt_entry(entry_id)
+            result, all_do_leave_operations, all_flows_to_takeover = self.mupi_proxy.murt.delete_murt_entry(entry_id)
+            #Re-evalute flows associated to a disabled provider (take-over)
+            self.take_over_flows(all_flows_to_takeover, all_do_leave_operations)
             #Do leave operation to eliminate the flow installed in the switch
-            self.perform_do_leave_operations(flows_to_delete)
+            self.perform_do_leave_operations(all_do_leave_operations)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -652,6 +658,9 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['GET'])
     def get_provider(self, req, provider_id, **_kwargs):
         try:
+            upstream_if = self.is_upstream_if(provider_id)
+            if upstream_if != -1:
+                provider_id = upstream_if
             provider = self.mupi_proxy.murt.retrieve_provider(provider_id)
             return Response(content_type='application/json', status=200, body=provider)
         except:
@@ -694,6 +703,9 @@ class MupiProxyApi(ControllerBase):
             body = json.dumps(response, indent=4)
             raise Response(content_type='application/json', status=400, body=body)
         try:
+            upstream_if = self.is_upstream_if(provider_id)
+            if upstream_if != -1:
+                provider_id = upstream_if
             updated_provider = self.mupi_proxy.murt.update_provider(provider_id, new_data)
             return Response(content_type='application/json', status=200, body=updated_provider)
         except:
@@ -705,11 +717,15 @@ class MupiProxyApi(ControllerBase):
     @route('mupiproxy', BASE_URL + '/providers/{provider_id}', methods=['DELETE'])
     def delete_provider(self, req, provider_id, **_kwargs):
         try:
-            requested_id = str(provider_id)
+            upstream_if = self.is_upstream_if(provider_id)
+            if upstream_if != -1:
+                provider_id = upstream_if
             #API Request
-            result, flows_to_delete = self.mupi_proxy.murt.delete_provider(provider_id)
+            result, all_do_leave_operations, all_flows_to_takeover = self.mupi_proxy.murt.delete_provider(provider_id)
+            #Re-evalute flows associated to a disabled provider (take-over)
+            self.take_over_flows(all_flows_to_takeover, all_do_leave_operations)
             #Do leave operation to eliminate the flow installed in the switch
-            self.perform_do_leave_operations(flows_to_delete)
+            self.perform_do_leave_operations(all_do_leave_operations)
             return Response(content_type='application/json', status=200, body=result)
         except:
             response = "[ERROR]"
@@ -908,9 +924,6 @@ class MupiProxyApi(ControllerBase):
             if upstream_ifs:
                 for provider, murt_entry_id in zip(upstream_ifs, murt_entry_ids):
                     #Requested Flow + Associated Provider
-                    #provider_id = self.is_upstream_if(provider)
-                    #provider_object = self.mupi_proxy.murt.providers[provider_id]
-                    #mcast_src_ip = provider_object["mcast_src_ip"]
                     new_flow = dict(murt_entry_id=murt_entry_id, client_ip=client_ip, downstream_if=in_port, mcast_group=mcast_group, mcast_src_ip=mcast_src_ip, upstream_if=provider)
                     #Unique ID: Flow + MurtEntry ID
                     id_flow = str(self.mupi_proxy.murt.dict_hash(new_flow))

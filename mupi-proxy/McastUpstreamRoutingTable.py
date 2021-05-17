@@ -554,11 +554,9 @@ class MURT:
     # Delete murt entry: deletes an entry from MURT
     def delete_murt_entry(self, id):
         if id in self.mcast_upstream_routing:
-            murtentry = self.mcast_upstream_routing[id]
-            requested_id = str(id)
-            flows_to_delete = self.find_flows(id)[0]
-            if len(flows_to_delete) == 0:
-                flows_to_delete = -1
+            all_do_leave_operations, all_flows_to_takeover = self.find_flows(id)
+            if len(all_do_leave_operations) == 0:
+                all_do_leave_operations = -1
             del self.mcast_upstream_routing[id]
             myquery = { "_id": id }
             self.db.murtentries.delete_one(myquery)
@@ -567,7 +565,7 @@ class MURT:
             response = "No murt entry with id: " + str(id)
             flows_to_delete = -1
         body = json.dumps(response, indent=4)
-        return body, flows_to_delete
+        return body, all_do_leave_operations, all_flows_to_takeover
 
     # Clear murt entries: deletes all entries from MURT
     def delete_murt_entries(self):
@@ -787,17 +785,14 @@ class MURT:
             self.db.providers.delete_one(myquery)
             response = "Deleted provider with id: " + str(id)
             entries_to_delete = self.find_associated_entries(upstream_if)
-            all_operations = []
+            all_do_leave_operations, all_flows_to_takeover = self.delete_flows_for_disabled(entries_to_delete)
             for entry in entries_to_delete:
-                response_tmp, ops = self.delete_murt_entry(entry["_id"])
-                if ops != -1:
-                    for operation in ops:
-                        all_operations.append(operation)
+                body, do_leave_operations, flows_to_takeover = self.delete_murt_entry(entry["_id"])
         else:
             response = "No provider with id: " + str(id)
-            all_operations = -1
+            all_do_leave_operations = -1
         body = json.dumps(response, indent=4)
-        return body, all_operations
+        return body, all_do_leave_operations, all_flows_to_takeover
 
     # Clear content providers: deletes all the content providers from the multicast proxy
     def delete_providers(self):
@@ -816,12 +811,12 @@ class MURT:
 
     # Print providers table
     def print_provider_table(self, provider_table):
-        self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format('Description', 'mcast_src_ip', 'upstream_if', 'mcast_groups', 'status'))
-        self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format('-----------------', '-------------------', '--------------------', '-----------------', '------------') )
+        self.logger.info( '{:20} {:25} {:20} {:40} {:12}'.format('Description', 'mcast_src_ip', 'upstream_if', 'mcast_groups', 'status'))
+        self.logger.info( '{:20} {:25} {:20} {:40} {:12}'.format('-----------------', '-------------------', '--------------------', '-----------------', '------------') )
         for key in provider_table.keys():
             e = provider_table[key]
-            self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format(e['description'], e['mcast_src_ip'], e['upstream_if'], str(e['mcast_groups']), e['status']) )
-        self.logger.info( '{:20} {:25} {:20} {:80} {:12}'.format('-----------------', '-------------------', '--------------------', '-----------------', '------------') )
+            self.logger.info( '{:20} {:25} {:20} {:40} {:12}'.format(e['description'], e['mcast_src_ip'], e['upstream_if'], str(e['mcast_groups']), e['status']) )
+        self.logger.info( '{:20} {:25} {:20} {:40} {:12}'.format('-----------------', '-------------------', '--------------------', '-----------------', '------------') )
 
     # Get providers table
     def get_provider_table(self, format, extended):
@@ -900,7 +895,7 @@ class MURT:
                 updated_entry = dict(client_ip=murtentry["client_ip"], client_ip_first=murtentry["client_ip_first"], client_ip_last=murtentry["client_ip_last"], downstream_if=murtentry["downstream_if"],\
                                    mcast_group=murtentry["mcast_group"], mcast_group_first=murtentry["mcast_group_first"], mcast_group_last=murtentry["mcast_group_last"], \
                                    mcast_src_ip=murtentry["mcast_src_ip"], mcast_src_ip_first=murtentry["mcast_src_ip_first"], mcast_src_ip_last=murtentry["mcast_src_ip_last"],
-                                   upstream_if=murtentry["upstream_if"], priority=murtentry["priority"], status=new_status)
+                                   upstream_if=murtentry["upstream_if"], priority=murtentry["priority"], status=new_status, switching_mode=murtentry["switching_mode"])
                 id = murtentry["_id"]
                 #myquery = { "_id": id }
                 #self.db.murtentries.update(myquery, updated_entry)    
@@ -908,6 +903,7 @@ class MURT:
                 self.mcast_upstream_routing[id] = updated_entry
         return entries_to_switch
 
+    #Find murt entries associated to a specific Provider and change his status
     def delete_flows_for_disabled(self, entries_to_switch):
         all_do_leave_operations = {}
         all_flows_to_takeover = {}
@@ -1148,12 +1144,12 @@ class MURT:
 
     # Find murt entries associated to a provider (same upstream_if)
     def find_associated_entries(self, upstream_if):
-        all_flows = []
+        entries = []
         requested_if = str(upstream_if)
         for entry in self.mcast_upstream_routing:
             if requested_if == str(self.mcast_upstream_routing[entry]["upstream_if"]):
-                all_flows.append(self.mcast_upstream_routing[entry])
-        return all_flows
+                entries.append(self.mcast_upstream_routing[entry])
+        return entries
 
     # Show switching mode
     def get_switching_mode(self):
@@ -1208,3 +1204,48 @@ class MURT:
         if interface_type == "Provider":
             self.upstream_ifs.append(interface_id)
         return interface_id
+
+    #Format provider data from a configuration file
+    def format_provider(self, provider):
+        # Description
+        if ( provider[0] == '' ):
+            description = 'ProviderX'
+        else:
+            try:
+                description = provider[0]
+            except ValueError:
+                self.logger.error(f'-- ERROR: {provider[0]} is not a valid Provider Description.')
+                return -1
+        # mcast_src_ip
+        if ( provider[1] == '' ):
+            mcast_src_ip = mcast_src_ip_first = mcast_src_ip_last = ''
+        else:
+            try:
+                mcast_src_ip = provider[1]
+                mcast_src_ip_first = str(IPAddress(IPNetwork(provider[1]).first))
+                mcast_src_ip_last  = str(IPAddress(IPNetwork(provider[1]).last))
+            except ValueError:
+                self.logger.error(f'-- ERROR: {provider[1]} is not a valid IP address or network.')
+                return -1
+        # mcast_groups
+        if ( provider[3] == '' ):
+            mcast_groups = ''
+        else:
+            try:
+                mcast_groups = provider[3]
+            except ValueError:
+                self.logger.error(f'-- ERROR: {provider[3]} is not a valid IP address or network.')
+                return -1
+        new_provider = dict(description=description, mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
+                                   mcast_groups=mcast_groups, upstream_if=str(provider[2]), status="Enabled")
+
+        proposed_id = self.dict_hash(new_provider)
+        if proposed_id in self.providers:
+            duplicated = {"error":"yes"}
+            return duplicated
+        else:
+            new_provider["_id"]=proposed_id
+            result = self.db.providers.insert_one(new_provider)
+            provider_id = str(result.inserted_id)
+            self.providers[provider_id] = new_provider
+            return provider_id
