@@ -367,7 +367,7 @@ class MURT:
         new_entry = dict(client_ip=client_ip, client_ip_first=client_ip_first, client_ip_last=client_ip_last, downstream_if=downstream_if,\
                            mcast_group=mcast_group, mcast_group_first=mcast_group_first, mcast_group_last=mcast_group_last, \
                            mcast_src_ip=mcast_src_ip, mcast_src_ip_first=mcast_src_ip_first, mcast_src_ip_last=mcast_src_ip_last,
-                           upstream_if=entry["upstream_if"], priority=entry["priority"], status=status, switching_mode=switching_mode)
+                           upstream_if=int(entry["upstream_if"]), priority=int(entry["priority"]), status=status, switching_mode=switching_mode)
 
         proposed_id = self.dict_hash(new_entry)
         if proposed_id in self.mcast_upstream_routing:
