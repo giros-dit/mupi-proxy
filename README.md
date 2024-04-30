@@ -1,5 +1,12 @@
-Multiple Upstream Interfaces Multicast Proxy (mupi-proxy)
-=========================================================
+# Multiple Upstream Interfaces Multicast Proxy (mupi-proxy)
+
+## Acknowledgements
+
+This work is a result of project [ECTICS](https://www.dit.upm.es/~giros/project/ectics/) (PID2019-105257RB-C21), funded by:
+
+![financing-logo](doc/img/MICIU_AEI_w400.jpg)
+
+## Introduction
 
 Mupi-proxy (Multiple UPstream Interfaces multicast Proxy) is a proof of concept implementation of the extensions defined in IETF [draft-asaeda-pim-multiif-igmpmldproxy-04](https://datatracker.ietf.org/doc/draft-asaeda-pim-multiif-igmpmldproxy/) to support multiple upstream interfaces in IGMP/MLD proxies. It has been implemented for Linux using an SDN application running over Ryu controller that controls and Open vSwitch in charge of relaying the multicast data flows and IGMP/MLD traffic.
 
